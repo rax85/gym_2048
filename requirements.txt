@@ -1,2 +1,4 @@
+absl-py
 gym
 numpy
+pillow
