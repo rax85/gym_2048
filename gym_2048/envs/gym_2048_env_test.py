@@ -36,12 +36,19 @@ class TestGym2048Env(unittest.TestCase):
         self.assertTrue(np.array_equal(packed, [4, 2, 0, 0]))
         self.assertEqual(reward, 4)
 
-
     def _save(self, env, name):
         env._render()
         rgb_data = env.render()
         image = Image.fromarray(rgb_data)
         image.save('/tmp/test_%s.png' % name)
+
+    def test_render(self):
+        env = Gym2048Env()
+        env._grid[0, 2] = 0
+        env._grid[1, 2] = 64
+        env._grid[2, 2] = 128
+        env._grid[3, 2] = 2048
+        self._save(env, 'render')
 
     def test_move_nomerge_l(self):
         env = Gym2048Env()

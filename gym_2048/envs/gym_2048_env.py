@@ -3,6 +3,7 @@ import random
 
 from absl import logging
 from gym import spaces
+from matplotlib import font_manager
 from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
@@ -43,6 +44,11 @@ class Gym2048Env(gym.Env):
 
     def __init__(self):
         super().__init__()
+        font_properties = font_manager.FontProperties(family='monospace', weight='bold')
+        font_file = font_manager.findfont(font_properties)
+        logging.info('Loading font from %s', font_file)
+        self._font = ImageFont.truetype(font_file, 24)
+
         n_actions = 4 # up, down, left, right.
         self.action_space = spaces.Discrete(n_actions)
         self.observation_space = spaces.Box(low=0, high=1.0, shape=CANVAS_SIZE, dtype=np.float)
@@ -147,7 +153,6 @@ class Gym2048Env(gym.Env):
     def _render(self):
         xmax, ymax = GRID_SIZE
         draw = ImageDraw.Draw(self._canvas)
-        font = font = ImageFont.truetype('/usr/share/fonts/truetype/ubuntu/UbuntuMono-R.ttf', 24)
         for x in range(xmax):
             for y in range(ymax):
                 rx = x * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2
@@ -155,7 +160,7 @@ class Gym2048Env(gym.Env):
                 val = self._grid[x, y]
                 draw.rectangle(((rx, ry), (rx + SQUARE_PX, ry + SQUARE_PX)), fill=RECT_COLORS[val])
                 if val > 0:
-                    draw.text((rx + 8, ry + 18), '%d' % val, fill='black', font=font)
+                    draw.text((rx + 8, ry + 18), '%d' % val, fill='black', font=self._font)
         self._current_observation = np.array(self._canvas)
 
     def render(self, mode='rgb_array'):
