@@ -51,7 +51,7 @@ class Gym2048Env(gym.Env):
 
         n_actions = 4 # up, down, left, right.
         self.action_space = spaces.Discrete(n_actions)
-        self.observation_space = spaces.Box(low=0, high=1.0, shape=CANVAS_SIZE, dtype=np.float)
+        self.observation_space = spaces.Box(low=0, high=1.0, shape=CANVAS_SIZE, dtype=np.float32)
         self.reset()
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
