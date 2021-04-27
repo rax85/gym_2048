@@ -1,10 +1,11 @@
 import unittest
-import gym_2048_env
 
 import numpy as np
 
 from PIL import Image
-from gym_2048_env import Gym2048Env
+
+from . import gym_2048_env
+from . import Gym2048Env
 
 class TestGym2048Env(unittest.TestCase):
     def test_pack_nomerge(self):
