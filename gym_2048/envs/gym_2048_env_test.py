@@ -198,6 +198,9 @@ class TestGym2048Env(unittest.TestCase):
 
     def test_done(self):
         env = Gym2048Env()
+        observation = env.reset()
+        self.assertIsNotNone(observation)
+        self.assertEqual(observation.dtype, np.float32)
         env._grid = np.asarray(
             [[16,   4, 256, 32],
              [ 8,  32,  64,  4],
@@ -205,11 +208,13 @@ class TestGym2048Env(unittest.TestCase):
              [16,   8,   2,  2]]
         ).transpose()
         self._save(env, 'move_merge_done0')
-        _, reward, done, _ = env.step(gym_2048_env.RIGHT)
+        observation, reward, done, _ = env.step(gym_2048_env.RIGHT)
         self._save(env, 'move_merge_done1')
 
         self.assertEqual(reward, 4)
         self.assertTrue(done)
+        self.assertIsNotNone(observation)
+        self.assertEqual(observation.dtype, np.float32)
 
 if __name__ == "__main__":
     unittest.main()

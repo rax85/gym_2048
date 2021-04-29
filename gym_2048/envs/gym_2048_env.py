@@ -49,9 +49,11 @@ class Gym2048Env(gym.Env):
         logging.info('Loading font from %s', font_file)
         self._font = ImageFont.truetype(font_file, 24)
 
+        observation_shape = list(CANVAS_SIZE)
+        observation_shape.append(3)
         n_actions = 4 # up, down, left, right.
         self.action_space = spaces.Discrete(n_actions)
-        self.observation_space = spaces.Box(low=0, high=1.0, shape=CANVAS_SIZE, dtype=np.float32)
+        self.observation_space = spaces.Box(low=0, high=1.0, shape=observation_shape, dtype=np.float32)
         self.reset()
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
@@ -64,7 +66,8 @@ class Gym2048Env(gym.Env):
         self._render()
         valid_moves = self._valid_moves()
         done = np.count_nonzero(valid_moves) == 0
-        return (self._current_observation.astype(np.float32) / 256.0), reward, done, valid_moves
+        info = {'valid_moves' : valid_moves}
+        return self._create_observation(), reward, done, info
 
     def _can_pack_or_slide(self, a):
         a = np.array(a)
@@ -97,7 +100,7 @@ class Gym2048Env(gym.Env):
         ]
 
     def _pack(self, vals):
-        reward = 0
+        reward = 0.0
         # Remove zeros.
         a = np.array(vals)
         a = a[a != 0]
@@ -138,6 +141,7 @@ class Gym2048Env(gym.Env):
         self._current_observation = np.array(self._canvas)
         self._random_spawn()
         self._render()
+        return self._create_observation()
 
     def _random_spawn(self):
         candidates = []
@@ -162,6 +166,9 @@ class Gym2048Env(gym.Env):
                 if val > 0:
                     draw.text((rx + 8, ry + 18), '%d' % val, fill='black', font=self._font)
         self._current_observation = np.array(self._canvas)
+
+    def _create_observation(self):
+        return self._current_observation.astype(np.float32) / 256.0
 
     def render(self, mode='rgb_array'):
         return self._current_observation
