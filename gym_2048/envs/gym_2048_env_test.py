@@ -1,3 +1,4 @@
+import copy
 import unittest
 
 import numpy as np
@@ -218,6 +219,26 @@ class TestGym2048Env(unittest.TestCase):
         env = Gym2048Env()
         self.assertFalse(env._can_pack_or_slide(vals))
 
+    def test_can_pack_or_slide_leading_zeros(self):
+        vals = [0, 0, 2, 4]
+        env = Gym2048Env()
+        self.assertFalse(env._can_pack_or_slide(vals))
+
+    def test_can_pack_or_slide_leading_zeros_single(self):
+        vals = [0, 0, 0, 4]
+        env = Gym2048Env()
+        self.assertFalse(env._can_pack_or_slide(vals))
+
+    def test_can_pack_or_slide_trailing_zeros(self):
+        vals = [2, 4, 0, 0]
+        env = Gym2048Env()
+        self.assertTrue(env._can_pack_or_slide(vals))
+
+    def test_can_pack_or_slide_leading_and_trailing_zeros(self):
+        vals = [0, 4, 0, 0]
+        env = Gym2048Env()
+        self.assertTrue(env._can_pack_or_slide(vals))
+
     def test_done(self):
         env = Gym2048Env()
         observation = env.reset()
@@ -261,6 +282,74 @@ class TestGym2048Env(unittest.TestCase):
         self.assertEqual(env._grid[3, 0], 4)
         self.assertEqual(env._grid[3, 1], 4)
         self.assertEqual(env._grid[3, 2], 2)
+
+    def test_cant_move_r(self):
+        env = Gym2048Env()
+        env.reset()
+        env._grid = np.asarray(
+            [[0, 0, 0, 2],
+             [0, 0, 0, 2],
+             [0, 0, 0, 2],
+             [0, 0, 0, 2]]
+        ).transpose()
+        self.assertTrue(env._can_move(gym_2048_env.UP))
+        self.assertTrue(env._can_move(gym_2048_env.DOWN))
+        self.assertTrue(env._can_move(gym_2048_env.LEFT))
+        print('interesting.......')
+        self.assertFalse(env._can_move(gym_2048_env.RIGHT))
+
+    def test_cant_move_u(self):
+        env = Gym2048Env()
+        env.reset()
+        env._grid = np.asarray(
+            [[2, 2, 2, 2],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0]]
+        ).transpose()
+        print('interesting.......')
+        self.assertFalse(env._can_move(gym_2048_env.UP))
+
+    def test_cant_move_l(self):
+        env = Gym2048Env()
+        env.reset()
+        env._grid = np.asarray(
+            [[2, 0, 0, 0],
+             [2, 0, 0, 0],
+             [2, 0, 0, 0],
+             [2, 0, 0, 0]]
+        ).transpose()
+        self.assertFalse(env._can_move(gym_2048_env.LEFT))
+
+    def test_cant_move_d(self):
+        env = Gym2048Env()
+        env.reset()
+        env._grid = np.asarray(
+            [[0, 0, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0],
+             [2, 2, 2, 2]]
+        ).transpose()
+        self.assertFalse(env._can_move(gym_2048_env.DOWN))
+
+    def test_negative_reward(self):
+        env = Gym2048Env()
+        env.reset()
+        env._grid = np.asarray(
+            [[0, 0, 0, 2],
+             [0, 0, 0, 8],
+             [0, 0, 2, 4],
+             [0, 0, 0, 4]]
+        ).transpose()
+        initial_state = copy.deepcopy(env._grid)
+        self._save(env, 'test_negative_reward_0')
+        _, reward, done, _ = env.step(gym_2048_env.RIGHT)
+        self._save(env, 'test_negative_reward1')
+
+        self.assertFalse(done)
+        self.assertEqual(reward, -32)
+        self.assertTrue(np.array_equal(env._grid, initial_state))
+
 
 if __name__ == "__main__":
     unittest.main()

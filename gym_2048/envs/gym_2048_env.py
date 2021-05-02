@@ -61,22 +61,28 @@ class Gym2048Env(gym.Env):
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
     def step(self, action):
-        if action in (LEFT, RIGHT):
-            reward = self._merge_left_right(action == LEFT)
-        elif action in (UP, DOWN):
-            reward = self._merge_up_down(action == UP)
-        self._random_spawn()
-        self._render()
+        valid_moves = self._valid_moves()
+        if valid_moves[action] == 1:
+            if action in (LEFT, RIGHT):
+                reward = self._merge_left_right(action == LEFT)
+            elif action in (UP, DOWN):
+                reward = self._merge_up_down(action == UP)
+            self._random_spawn()
+            self._render()
+        else:
+            reward = -32
         observation, done = self._create_observation()
         return observation, reward, done, {}
 
     def _can_pack_or_slide(self, a):
         a = np.array(a)
         packed = a[a != 0]
-        if len(packed) < len(a):
+        delta_len = len(a) - len(packed)
+        repadded = np.pad(packed, pad_width=(delta_len, 0))
+        if delta_len > 0 and not np.array_equal(a, repadded):
             return True # Can slide
-        for i in range(0, len(a), 2):
-            if a[i] == a[i + 1]:
+        for i in range(0, len(packed) - 1):
+            if packed[i] == packed[i + 1]:
                 return True
         return False
 
@@ -84,21 +90,22 @@ class Gym2048Env(gym.Env):
         can_move = False
         if direction in (UP, DOWN):
             for y in range(GRID_SIZE[0]):
-                cur_slice = self._grid[y] if (direction == UP) else np.flip(self._grid[y])
+                cur_slice = self._grid[y] if (direction == DOWN) else np.flip(self._grid[y])
                 can_move |= self._can_pack_or_slide(cur_slice)
         else:
             for x in range(GRID_SIZE[1]):
-                cur_slice = self._grid[:, x] if (direction == LEFT) else np.flip(self._grid[:, x])
+                cur_slice = self._grid[:, x] if (direction == RIGHT) else np.flip(self._grid[:, x])
                 can_move |= self._can_pack_or_slide(cur_slice)
         return can_move
 
     def _valid_moves(self):
-        return [
+        valid_moves = [
             1 if self._can_move(UP) else 0,
             1 if self._can_move(DOWN) else 0,
             1 if self._can_move(LEFT) else 0,
             1 if self._can_move(RIGHT) else 0
         ]
+        return valid_moves
 
     def _pack(self, vals):
         reward = 0.0
