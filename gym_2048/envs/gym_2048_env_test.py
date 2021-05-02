@@ -181,6 +181,28 @@ class TestGym2048Env(unittest.TestCase):
         self.assertFalse(done)
         self.assertEqual(reward, 512)
 
+    def test_merge_first_slide_second_u(self):
+        env = Gym2048Env()
+        env._grid[1, 0] = 4
+        env._grid[1, 1] = 2
+        env._grid[1, 2] = 2
+        env._grid[1, 3] = 2
+        self._save(env, 'test_merge_first_slide_second_u0')
+        _, reward, done, _ = env.step(gym_2048_env.UP)
+        self._save(env, 'test_merge_first_slide_second_u1')
+
+        self.assertEqual(env._grid[1, 0], 4)
+        self.assertEqual(env._grid[1, 1], 4)
+        self.assertEqual(env._grid[1, 2], 2)
+        self.assertFalse(done)
+        self.assertEqual(reward, 4)
+
+    def test_pack(self):
+        env = Gym2048Env()
+        actual, reward = env._pack([4, 2, 2, 2])
+        self.assertTrue(np.array_equal([4, 4, 2, 0], actual))
+        self.assertEqual(reward, 4)
+
     def test_can_pack_or_slide_pack(self):
         vals = [2, 2, 2, 2]
         env = Gym2048Env()
@@ -200,7 +222,8 @@ class TestGym2048Env(unittest.TestCase):
         env = Gym2048Env()
         observation = env.reset()
         self.assertIsNotNone(observation)
-        self.assertEqual(observation.dtype, np.float32)
+        self.assertEqual(observation['observation'].dtype, np.float32)
+        self.assertEqual(observation['valid_mask'].dtype, np.int32)
         env._grid = np.asarray(
             [[16,   4, 256, 32],
              [ 8,  32,  64,  4],
@@ -213,8 +236,31 @@ class TestGym2048Env(unittest.TestCase):
 
         self.assertEqual(reward, 4)
         self.assertTrue(done)
-        self.assertIsNotNone(observation)
-        self.assertEqual(observation.dtype, np.float32)
+        self.assertIsNotNone(observation['observation'])
+        self.assertIsNotNone(observation['valid_mask'])
+        self.assertEqual(observation['observation'].dtype, np.float32)
+
+    def test_real_world1(self):
+        env = Gym2048Env()
+        env.reset()
+        env._grid = np.asarray(
+            [[0, 4, 8, 4],
+             [0, 2, 8, 2],
+             [0, 4, 8, 2],
+             [2, 8, 4, 2]]
+        ).transpose()
+        self._save(env, 'test_real_world1_0')
+        _, reward, done, _ = env.step(gym_2048_env.UP)
+        self._save(env, 'test_real_world1_1')
+
+        self.assertFalse(done)
+        self.assertEqual(reward, 20)
+        self.assertEqual(env._grid[2, 0], 16)
+        self.assertEqual(env._grid[2, 1], 8)
+        self.assertEqual(env._grid[2, 2], 4)
+        self.assertEqual(env._grid[3, 0], 4)
+        self.assertEqual(env._grid[3, 1], 4)
+        self.assertEqual(env._grid[3, 2], 2)
 
 if __name__ == "__main__":
     unittest.main()

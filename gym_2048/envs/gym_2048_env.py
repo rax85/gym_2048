@@ -53,7 +53,10 @@ class Gym2048Env(gym.Env):
         observation_shape.append(3)
         n_actions = 4 # up, down, left, right.
         self.action_space = spaces.Discrete(n_actions)
-        self.observation_space = spaces.Box(low=0, high=1.0, shape=observation_shape, dtype=np.float32)
+        self.observation_space = spaces.Dict({
+            'observation': spaces.Box(low=0, high=1.0, shape=observation_shape, dtype=np.float32),
+            'valid_mask': spaces.Box(low=0, high=1, shape=[n_actions], dtype=np.int32)
+        })
         self.reset()
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
@@ -64,10 +67,8 @@ class Gym2048Env(gym.Env):
             reward = self._merge_up_down(action == UP)
         self._random_spawn()
         self._render()
-        valid_moves = self._valid_moves()
-        done = np.count_nonzero(valid_moves) == 0
-        info = {'valid_moves' : valid_moves}
-        return self._create_observation(), reward, done, info
+        observation, done = self._create_observation()
+        return observation, reward, done, {}
 
     def _can_pack_or_slide(self, a):
         a = np.array(a)
@@ -106,7 +107,7 @@ class Gym2048Env(gym.Env):
         a = a[a != 0]
         # Add adjacent elements.
         length = len(a)
-        for i in range(0, length, 2):
+        for i in range(0, length):
             if i + 1 != length and a[i] == a[i + 1]:
                 a[i] *= 2
                 a[i + 1] = 0
@@ -141,7 +142,8 @@ class Gym2048Env(gym.Env):
         self._current_observation = np.array(self._canvas)
         self._random_spawn()
         self._render()
-        return self._create_observation()
+        observation, _ = self._create_observation()
+        return observation
 
     def _random_spawn(self):
         candidates = []
@@ -168,7 +170,12 @@ class Gym2048Env(gym.Env):
         self._current_observation = np.array(self._canvas)
 
     def _create_observation(self):
-        return self._current_observation.astype(np.float32) / 256.0
+        valid_moves = np.asarray(self._valid_moves(), dtype=np.int32)
+        done = np.count_nonzero(valid_moves) == 0
+        return {
+            'observation': self._current_observation.astype(np.float32) / 256.0,
+            'valid_mask': valid_moves
+        }, done
 
     def render(self, mode='rgb_array'):
         return self._current_observation
