@@ -62,6 +62,7 @@ class Gym2048Env(gym.Env):
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
     def step(self, action):
+        reward = 0
         valid_moves = self._valid_moves()
         if valid_moves[action] == 1:
             if action in (LEFT, RIGHT):
