@@ -1,4 +1,4 @@
-import gym
+import gymnasium as gym
 import random
 
 from absl import logging
@@ -40,10 +40,11 @@ CANVAS_SIZE = (GRID_SIZE[0] * (SQUARE_PX + PADDING_PX),
 
 class Gym2048Env(gym.Env):
     """A Gym environment for playing the game 2048."""
-    metadata = {'render.modes': ['rgb_array']}
+    metadata = {'render_modes': ['rgb_array']}
 
-    def __init__(self):
+    def __init__(self, render_mode=None):
         super().__init__()
+        self.render_mode = render_mode
         font_properties = font_manager.FontProperties(family='monospace', weight='bold')
         font_file = font_manager.findfont(font_properties)
         logging.info('Loading font from %s', font_file)
@@ -71,8 +72,9 @@ class Gym2048Env(gym.Env):
             self._render()
         else:
             reward = -32
-        observation, done = self._create_observation()
-        return observation, reward, done, {}
+        observation, terminated = self._create_observation()
+        truncated = False
+        return observation, reward, terminated, truncated, {}
 
     def _can_pack_or_slide(self, a):
         a = np.array(a)
@@ -150,7 +152,7 @@ class Gym2048Env(gym.Env):
         self._random_spawn()
         self._render()
         observation, _ = self._create_observation()
-        return observation
+        return observation, {}
 
     def _random_spawn(self):
         candidates = []
