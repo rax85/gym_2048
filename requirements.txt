@@ -1,5 +1,1 @@
-absl-py
-gym
-matplotlib
-numpy
-pillow
+gymnasium

@@ -1,11 +1,31 @@
-from setuptools import setup
+from setuptools import find_packages, setup
+
+with open('README.md', 'r') as f:
+    long_description = f.read()
 
 setup(name='gym_2048',
       version = '0.0.1',
+      packages=find_packages(),
       install_requires = [
             'absl-py',
-            'gym',
+            'gymnasium',
             'numpy',
-            'pillow'
-      ]
+            'pillow',
+            'matplotlib'
+      ],
+      author='Your Name',
+      author_email='your.email@example.com',
+      description='A simple gym environment to play the 2048 game.',
+      long_description=long_description,
+      long_description_content_type='text/markdown',
+      url='https://github.com/your-username/gym_2048',
+      classifiers=[
+          'Development Status :: 3 - Alpha',
+          'Intended Audience :: Developers',
+          'License :: OSI Approved :: MIT License',
+          'Programming Language :: Python :: 3',
+          'Programming Language :: Python :: 3.8',
+          'Programming Language :: Python :: 3.9',
+          'Programming Language :: Python :: 3.10',
+      ],
 )

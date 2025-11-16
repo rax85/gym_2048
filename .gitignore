@@ -1,3 +1,7 @@
+
+build/
+*.egg-info
+.pytest_cache/
 .vscode
 gym_2048/__pycache__
 gym_2048/envs/__pycache__
