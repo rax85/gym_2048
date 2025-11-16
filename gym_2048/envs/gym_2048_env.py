@@ -1,16 +1,17 @@
 """A Gym environment for playing the game 2048."""
-import random
+# pylint: disable=too-many-instance-attributes, attribute-defined-outside-init, duplicate-code
+import random # Standard library
 
-import gymnasium as gym
+import random # Standard library
 
-from absl import logging
-from gymnasium import spaces
-from matplotlib import font_manager
-from PIL import Image
-from PIL import ImageDraw
-from PIL import ImageFont
-
-import numpy as np
+import gymnasium as gym # Third-party
+from absl import logging # Third-party
+from gymnasium import spaces # Third-party
+from matplotlib import font_manager # Third-party
+from PIL import Image # Third-party
+from PIL import ImageDraw # Third-party
+from PIL import ImageFont # Third-party
+import numpy as np # Third-party
 
 UP = 0
 DOWN = 1
@@ -150,7 +151,7 @@ class Gym2048Env(gym.Env):
             self._grid[:, x] = packed if is_left else np.flip(packed)
         return reward
 
-    def reset(self, seed=None, options=None):
+    def reset(self, seed=None, options=None): # pylint: disable=arguments-differ
         super().reset(seed=seed)
         self._grid = np.zeros(GRID_SIZE, dtype=np.int32)
         self._score = 0
@@ -194,7 +195,7 @@ class Gym2048Env(gym.Env):
             'valid_mask': valid_moves
         }, done
 
-    def render(self, _mode='rgb_array'):
+    def render(self):
         return self._current_observation
 
     def close(self):
