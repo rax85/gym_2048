@@ -2,7 +2,7 @@ import gymnasium as gym
 import random
 
 from absl import logging
-from gym import spaces
+from gymnasium import spaces
 from matplotlib import font_manager
 from PIL import Image
 from PIL import ImageDraw
@@ -145,7 +145,8 @@ class Gym2048Env(gym.Env):
             self._grid[:, x] = packed if is_left else np.flip(packed)
         return reward
 
-    def reset(self):
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
         self._grid = np.zeros(GRID_SIZE, dtype=np.int32)
         self._score = 0
         self._canvas = Image.new(mode='RGB', size=CANVAS_SIZE, color='white')
