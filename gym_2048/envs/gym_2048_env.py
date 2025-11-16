@@ -68,6 +68,7 @@ class Gym2048Env(gym.Env):
                 reward = self._merge_left_right(action == LEFT)
             elif action in (UP, DOWN):
                 reward = self._merge_up_down(action == UP)
+            self._score += reward
             self._random_spawn()
             self._render()
         else:
@@ -149,6 +150,7 @@ class Gym2048Env(gym.Env):
         self._score = 0
         self._canvas = Image.new(mode='RGB', size=CANVAS_SIZE, color='white')
         self._current_observation = np.array(self._canvas)
+        self._random_spawn()
         self._random_spawn()
         self._render()
         observation, _ = self._create_observation()

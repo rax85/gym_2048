@@ -9,6 +9,11 @@ from . import gym_2048_env
 from . import Gym2048Env
 
 class TestGym2048Env(unittest.TestCase):
+    def test_initial_state(self):
+        env = Gym2048Env()
+        env.reset()
+        self.assertEqual(np.count_nonzero(env._grid), 2)
+
     def test_pack_nomerge(self):
         vals = [4, 0, 2, 0]
         env = Gym2048Env()
@@ -169,6 +174,7 @@ class TestGym2048Env(unittest.TestCase):
 
     def test_move_doublemerge(self):
         env = Gym2048Env()
+        env._grid = np.zeros_like(env._grid)
         env._grid[1, 0] = 128
         env._grid[1, 1] = 128
         env._grid[1, 2] = 128
@@ -349,6 +355,40 @@ class TestGym2048Env(unittest.TestCase):
         self.assertFalse(done)
         self.assertEqual(reward, -32)
         self.assertTrue(np.array_equal(env._grid, initial_state))
+
+
+    def test_score_accumulation(self):
+        env = Gym2048Env()
+        env.reset()
+        env._grid = np.asarray(
+            [[2, 2, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0]]
+        ).transpose()
+        self.assertEqual(env._score, 0)
+        env.step(gym_2048_env.LEFT)
+        self.assertEqual(env._score, 4)
+        env._grid = np.asarray(
+            [[4, 4, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0]]
+        ).transpose()
+        env.step(gym_2048_env.LEFT)
+        self.assertEqual(env._score, 12)
+
+
+    def test_game_over(self):
+        env = Gym2048Env()
+        env._grid = np.asarray(
+            [[2, 4, 2, 4],
+             [4, 2, 4, 2],
+             [2, 4, 2, 4],
+             [4, 2, 4, 2]]
+        )
+        observation, reward, terminated, truncated, info = env.step(gym_2048_env.UP)
+        self.assertTrue(terminated)
 
 
 if __name__ == "__main__":
