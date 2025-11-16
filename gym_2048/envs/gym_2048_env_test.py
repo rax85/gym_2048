@@ -7,8 +7,8 @@ import numpy as np
 
 from PIL import Image
 
-from . import gym_2048_env
-from .gym_2048_env import Gym2048Env
+from gym_2048.envs import gym_2048_env
+from gym_2048.envs.gym_2048_env import Gym2048Env
 
 class TestGym2048Env(unittest.TestCase):
     # pylint: disable=too-many-public-methods
