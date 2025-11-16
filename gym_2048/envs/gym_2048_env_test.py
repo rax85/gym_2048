@@ -1,3 +1,4 @@
+"""Tests for the Gym2048Env environment."""
 import copy
 import unittest
 
@@ -6,10 +7,12 @@ import numpy as np
 from PIL import Image
 
 from . import gym_2048_env
-from . import Gym2048Env
+from .gym_2048_env import Gym2048Env
 
 class TestGym2048Env(unittest.TestCase):
+    """Tests for the Gym2048Env environment."""
     def test_initial_state(self):
+        """Test that the initial state has two non-zero tiles."""
         env = Gym2048Env()
         env.reset()
         self.assertEqual(np.count_nonzero(env._grid), 2)
@@ -46,7 +49,7 @@ class TestGym2048Env(unittest.TestCase):
         env._render()
         rgb_data = env.render()
         image = Image.fromarray(rgb_data)
-        image.save('/tmp/test_%s.png' % name)
+        image.save(f'/tmp/test_{name}.png')
 
     def test_render(self):
         env = Gym2048Env()
@@ -58,12 +61,13 @@ class TestGym2048Env(unittest.TestCase):
 
     def test_move_nomerge_l(self):
         env = Gym2048Env()
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
         env._grid[0, 2] = 0
         env._grid[1, 2] = 128
         env._grid[2, 2] = 0
         env._grid[3, 2] = 256
         self._save(env, 'move_nomerge_l0')
-        _, reward, done, _, _ = env.step(gym_2048_env.LEFT)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.LEFT)
         self._save(env, 'move_nomerge_l1')
 
         self.assertEqual(env._grid[0, 2], 128)
@@ -73,12 +77,13 @@ class TestGym2048Env(unittest.TestCase):
 
     def test_move_nomerge_r(self):
         env = Gym2048Env()
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
         env._grid[0, 2] = 128
         env._grid[1, 2] = 0
         env._grid[2, 2] = 256
         env._grid[3, 2] = 0
         self._save(env, 'test_move_nomerge_r0')
-        _, reward, done, _, _ = env.step(gym_2048_env.RIGHT)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.RIGHT)
         self._save(env, 'test_move_nomerge_r1')
 
         self.assertEqual(env._grid[2, 2], 128)
@@ -88,12 +93,13 @@ class TestGym2048Env(unittest.TestCase):
 
     def test_move_nomerge_u(self):
         env = Gym2048Env()
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
         env._grid[1, 0] = 0
         env._grid[1, 1] = 128
         env._grid[1, 2] = 0
         env._grid[1, 3] = 256
         self._save(env, 'test_move_nomerge_u0')
-        _, reward, done, _, _ = env.step(gym_2048_env.UP)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.UP)
         self._save(env, 'test_move_nomerge_u1')
 
         self.assertEqual(env._grid[1, 0], 128)
@@ -103,12 +109,13 @@ class TestGym2048Env(unittest.TestCase):
 
     def test_move_nomerge_d(self):
         env = Gym2048Env()
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
         env._grid[1, 0] = 128
         env._grid[1, 1] = 0
         env._grid[1, 2] = 256
         env._grid[1, 3] = 0
         self._save(env, 'test_move_nomerge_d0')
-        _, reward, done, _, _ = env.step(gym_2048_env.DOWN)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.DOWN)
         self._save(env, 'test_move_nomerge_d1')
 
         self.assertEqual(env._grid[1, 2], 128)
@@ -123,7 +130,7 @@ class TestGym2048Env(unittest.TestCase):
         env._grid[2, 2] = 0
         env._grid[3, 2] = 128
         self._save(env, 'move_merge_l0')
-        _, reward, done, _, _ = env.step(gym_2048_env.LEFT)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.LEFT)
         self._save(env, 'move_merge_l1')
 
         self.assertEqual(env._grid[0, 2], 256)
@@ -137,7 +144,7 @@ class TestGym2048Env(unittest.TestCase):
         env._grid[2, 2] = 128
         env._grid[3, 2] = 0
         self._save(env, 'move_merge_r0')
-        _, reward, done, _, _ = env.step(gym_2048_env.RIGHT)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.RIGHT)
         self._save(env, 'move_merge_r1')
 
         self.assertEqual(env._grid[3, 2], 256)
@@ -151,7 +158,7 @@ class TestGym2048Env(unittest.TestCase):
         env._grid[1, 2] = 0
         env._grid[1, 3] = 128
         self._save(env, 'move_merge_u0')
-        _, reward, done, _, _ = env.step(gym_2048_env.UP)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.UP)
         self._save(env, 'move_merge_u1')
 
         self.assertEqual(env._grid[1, 0], 256)
@@ -165,7 +172,7 @@ class TestGym2048Env(unittest.TestCase):
         env._grid[1, 2] = 128
         env._grid[1, 3] = 0
         self._save(env, 'move_merge_d0')
-        _, reward, done, _, _ = env.step(gym_2048_env.DOWN)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.DOWN)
         self._save(env, 'move_merge_d1')
 
         self.assertEqual(env._grid[1, 3], 256)
@@ -180,7 +187,7 @@ class TestGym2048Env(unittest.TestCase):
         env._grid[1, 2] = 128
         env._grid[1, 3] = 128
         self._save(env, 'move_merge_double0')
-        _, reward, done, _, _ = env.step(gym_2048_env.DOWN)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.DOWN)
         self._save(env, 'move_merge_double1')
 
         self.assertEqual(env._grid[1, 2], 256)
@@ -195,7 +202,7 @@ class TestGym2048Env(unittest.TestCase):
         env._grid[1, 2] = 2
         env._grid[1, 3] = 2
         self._save(env, 'test_merge_first_slide_second_u0')
-        _, reward, done, _, _ = env.step(gym_2048_env.UP)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.UP)
         self._save(env, 'test_merge_first_slide_second_u1')
 
         self.assertEqual(env._grid[1, 0], 4)
@@ -247,10 +254,10 @@ class TestGym2048Env(unittest.TestCase):
 
     def test_done(self):
         env = Gym2048Env()
-        observation, _ = env.reset()
-        self.assertIsNotNone(observation)
-        self.assertEqual(observation['observation'].dtype, np.float32)
-        self.assertEqual(observation['valid_mask'].dtype, np.int32)
+        _observation, _info = env.reset()
+        self.assertIsNotNone(_observation)
+        self.assertEqual(_observation['observation'].dtype, np.float32)
+        self.assertEqual(_observation['valid_mask'].dtype, np.int32)
         env._grid = np.asarray(
             [[16,   4, 256, 32],
              [ 8,  32,  64,  4],
@@ -258,14 +265,14 @@ class TestGym2048Env(unittest.TestCase):
              [16,   8,   2,  2]]
         ).transpose()
         self._save(env, 'move_merge_done0')
-        observation, reward, done, _, _ = env.step(gym_2048_env.RIGHT)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.RIGHT)
         self._save(env, 'move_merge_done1')
 
         self.assertEqual(reward, 4)
         self.assertTrue(done)
-        self.assertIsNotNone(observation['observation'])
-        self.assertIsNotNone(observation['valid_mask'])
-        self.assertEqual(observation['observation'].dtype, np.float32)
+        self.assertIsNotNone(_observation['observation'])
+        self.assertIsNotNone(_observation['valid_mask'])
+        self.assertEqual(_observation['observation'].dtype, np.float32)
 
     def test_real_world1(self):
         env = Gym2048Env()
@@ -277,7 +284,7 @@ class TestGym2048Env(unittest.TestCase):
              [2, 8, 4, 2]]
         ).transpose()
         self._save(env, 'test_real_world1_0')
-        _, reward, done, _, _ = env.step(gym_2048_env.UP)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.UP)
         self._save(env, 'test_real_world1_1')
 
         self.assertFalse(done)
@@ -349,7 +356,7 @@ class TestGym2048Env(unittest.TestCase):
         ).transpose()
         initial_state = copy.deepcopy(env._grid)
         self._save(env, 'test_negative_reward_0')
-        _, reward, done, _, _ = env.step(gym_2048_env.RIGHT)
+        _observation, reward, done, _truncated, _info = env.step(gym_2048_env.RIGHT)
         self._save(env, 'test_negative_reward1')
 
         self.assertFalse(done)
@@ -387,7 +394,7 @@ class TestGym2048Env(unittest.TestCase):
              [2, 4, 2, 4],
              [4, 2, 4, 2]]
         )
-        observation, reward, terminated, truncated, info = env.step(gym_2048_env.UP)
+        _observation, _reward, terminated, _truncated, _info = env.step(gym_2048_env.UP)
         self.assertTrue(terminated)
 
 

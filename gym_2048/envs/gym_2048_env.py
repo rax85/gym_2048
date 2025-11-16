@@ -1,5 +1,7 @@
-import gymnasium as gym
+"""A Gym environment for playing the game 2048."""
 import random
+
+import gymnasium as gym
 
 from absl import logging
 from gymnasium import spaces
@@ -58,6 +60,8 @@ class Gym2048Env(gym.Env):
             'observation': spaces.Box(low=0, high=1.0, shape=observation_shape, dtype=np.float32),
             'valid_mask': spaces.Box(low=0, high=1, shape=[n_actions], dtype=np.int32)
         })
+        self._canvas = Image.new(mode='RGB', size=CANVAS_SIZE, color='white')
+        self._current_observation = np.array(self._canvas)
         self.reset()
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
@@ -179,7 +183,7 @@ class Gym2048Env(gym.Env):
                 val = self._grid[x, y]
                 draw.rectangle(((rx, ry), (rx + SQUARE_PX, ry + SQUARE_PX)), fill=RECT_COLORS[val])
                 if val > 0:
-                    draw.text((rx + 8, ry + 18), '%d' % val, fill='black', font=self._font)
+                    draw.text((rx + 8, ry + 18), f'{val}', fill='black', font=self._font)
         self._current_observation = np.array(self._canvas)
 
     def _create_observation(self):
@@ -190,7 +194,7 @@ class Gym2048Env(gym.Env):
             'valid_mask': valid_moves
         }, done
 
-    def render(self, mode='rgb_array'):
+    def render(self, _mode='rgb_array'):
         return self._current_observation
 
     def close(self):
