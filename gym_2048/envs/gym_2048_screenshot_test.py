@@ -4,7 +4,6 @@ import unittest
 import numpy as np
 from PIL import Image, ImageChops
 
-from gym_2048.envs import gym_2048_env
 from gym_2048.envs.gym_2048_env import Gym2048Env
 
 class TestGym2048Screenshot(unittest.TestCase):

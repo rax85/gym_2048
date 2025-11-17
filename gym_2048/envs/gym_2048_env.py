@@ -1,17 +1,15 @@
 """A Gym environment for playing the game 2048."""
-# pylint: disable=too-many-instance-attributes, attribute-defined-outside-init, duplicate-code
-import random # Standard library
+# pylint: disable=too-many-instance-attributes, duplicate-code
+import random
 
-import random # Standard library
-
-import gymnasium as gym # Third-party
-from absl import logging # Third-party
-from gymnasium import spaces # Third-party
-from matplotlib import font_manager # Third-party
-from PIL import Image # Third-party
-from PIL import ImageDraw # Third-party
-from PIL import ImageFont # Third-party
-import numpy as np # Third-party
+import gymnasium as gym
+from absl import logging
+from gymnasium import spaces
+from matplotlib import font_manager
+from PIL import Image
+from PIL import ImageDraw
+from PIL import ImageFont
+import numpy as np
 
 UP = 0
 DOWN = 1
