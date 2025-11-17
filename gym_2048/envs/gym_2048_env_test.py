@@ -168,6 +168,7 @@ class TestGym2048Env(unittest.TestCase):
     def test_move_merge_u(self):
         """Test moving up with merges."""
         env = Gym2048Env()
+        env.reset(options='nospawn')
         env._grid[1, 0] = 0
         env._grid[1, 1] = 128
         env._grid[1, 2] = 0
@@ -183,6 +184,7 @@ class TestGym2048Env(unittest.TestCase):
     def test_move_merge_d(self):
         """Test moving down with merges."""
         env = Gym2048Env()
+        env.reset(options='nospawn')
         env._grid[1, 0] = 128
         env._grid[1, 1] = 0
         env._grid[1, 2] = 128

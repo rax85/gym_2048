@@ -53,8 +53,7 @@ class Gym2048Env(gym.Env):
         logging.info('Loading font from %s', font_file)
         self._font = ImageFont.truetype(font_file, 24)
 
-        observation_shape = list(CANVAS_SIZE)
-        observation_shape.append(3)
+        observation_shape = [CANVAS_SIZE[0], CANVAS_SIZE[1], 3]
         n_actions = 4 # up, down, left, right.
         self.action_space = spaces.Discrete(n_actions)
         self.observation_space = spaces.Dict({
@@ -157,8 +156,9 @@ class Gym2048Env(gym.Env):
         self._score = 0
         self._canvas = Image.new(mode='RGB', size=CANVAS_SIZE, color='white')
         self._current_observation = np.array(self._canvas)
-        self._random_spawn()
-        self._random_spawn()
+        if options is None or options != 'nospawn':
+            self._random_spawn()
+            self._random_spawn()
         self._render()
         observation, _ = self._create_observation()
         return observation, {}
