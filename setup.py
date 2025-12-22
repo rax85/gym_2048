@@ -12,7 +12,8 @@ setup(name='gym_2048',
             'gymnasium',
             'numpy',
             'pillow',
-            'matplotlib'
+            'matplotlib',
+            'numba'
       ],
       author='Your Name',
       author_email='your.email@example.com',

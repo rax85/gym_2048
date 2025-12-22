@@ -10,6 +10,7 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 import numpy as np
+import numba
 
 UP = 0
 DOWN = 1
@@ -39,6 +40,127 @@ CANVAS_SIZE = (GRID_SIZE[0] * (SQUARE_PX + PADDING_PX),
                GRID_SIZE[1] * (SQUARE_PX + PADDING_PX))
 
 
+@numba.jit(nopython=True)
+def _pack_jit(a):
+    non_zeros = a[a != 0]
+    out = np.zeros(a.shape, dtype=a.dtype)
+    reward = 0
+    idx = 0
+    i = 0
+    length = len(non_zeros)
+    while i < length:
+        val = non_zeros[i]
+        if i + 1 < length and val == non_zeros[i+1]:
+            merged_val = val * 2
+            out[idx] = merged_val
+            reward += merged_val
+            i += 2
+        else:
+            out[idx] = val
+            i += 1
+        idx += 1
+    return out, reward
+
+
+@numba.jit(nopython=True)
+def _can_pack_or_slide_jit(a):
+    length = len(a)
+    last_nonzero_val = -1
+    for i in range(length):
+        val = a[i]
+        if val != 0:
+            if last_nonzero_val == val:
+                return True
+            last_nonzero_val = val
+    
+    has_nonzero = False
+    for i in range(length):
+        val = a[i]
+        if val != 0:
+            has_nonzero = True
+        else:
+            if has_nonzero:
+                return True
+    return False
+
+
+@numba.jit(nopython=True)
+def _get_valid_moves_jit(grid):
+    moves = np.zeros(4, dtype=np.int32)
+    
+    # UP (0)
+    can_up = False
+    for i in range(4):
+        col = grid[i] # View of column i
+        col_flipped = col[::-1]
+        if _can_pack_or_slide_jit(col_flipped):
+            can_up = True
+            break
+    moves[0] = 1 if can_up else 0
+    
+    # DOWN (1)
+    can_down = False
+    for i in range(4):
+        col = grid[i]
+        if _can_pack_or_slide_jit(col):
+            can_down = True
+            break
+    moves[1] = 1 if can_down else 0
+    
+    # LEFT (2)
+    can_left = False
+    for i in range(4):
+        row = grid[:, i]
+        row_flipped = row[::-1]
+        if _can_pack_or_slide_jit(row_flipped):
+            can_left = True
+            break
+    moves[2] = 1 if can_left else 0
+    
+    # RIGHT (3)
+    can_right = False
+    for i in range(4):
+        row = grid[:, i]
+        if _can_pack_or_slide_jit(row):
+            can_right = True
+            break
+    moves[3] = 1 if can_right else 0
+    
+    return moves
+
+
+@numba.jit(nopython=True)
+def _merge_jit(grid, action):
+    reward = 0
+    if action == 0: # UP
+        for i in range(4):
+            col = grid[i]
+            packed, r = _pack_jit(col)
+            reward += r
+            grid[i] = packed
+    elif action == 1: # DOWN
+        for i in range(4):
+            col = grid[i]
+            col_flipped = col[::-1]
+            packed, r = _pack_jit(col_flipped)
+            reward += r
+            grid[i] = packed[::-1]
+    elif action == 2: # LEFT
+        for i in range(4):
+            row = grid[:, i]
+            packed, r = _pack_jit(row)
+            reward += r
+            grid[:, i] = packed
+    elif action == 3: # RIGHT
+        for i in range(4):
+            row = grid[:, i]
+            row_flipped = row[::-1]
+            packed, r = _pack_jit(row_flipped)
+            reward += r
+            grid[:, i] = packed[::-1]
+    return reward
+
+
 class Gym2048Env(gym.Env):
     """A Gym environment for playing the game 2048."""
     metadata = {'render_modes': ['rgb_array']}
@@ -65,12 +187,9 @@ class Gym2048Env(gym.Env):
 
     def step(self, action):
         reward = 0
-        valid_moves = self._valid_moves()
+        valid_moves = _get_valid_moves_jit(self._grid)
         if valid_moves[action] == 1:
-            if action in (LEFT, RIGHT):
-                reward = self._merge_left_right(action == LEFT)
-            elif action in (UP, DOWN):
-                reward = self._merge_up_down(action == UP)
+            reward = _merge_jit(self._grid, action)
             self._score += reward
             self._random_spawn()
             self._render()
@@ -79,74 +198,6 @@ class Gym2048Env(gym.Env):
         observation, terminated = self._create_observation()
         truncated = False
         return observation, reward, terminated, truncated, {}
-
-    def _can_pack_or_slide(self, a):
-        a = np.array(a)
-        packed = a[a != 0]
-        delta_len = len(a) - len(packed)
-        repadded = np.pad(packed, pad_width=(delta_len, 0))
-        if delta_len > 0 and not np.array_equal(a, repadded):
-            return True # Can slide
-        for i in range(0, len(packed) - 1):
-            if packed[i] == packed[i + 1]:
-                return True
-        return False
-
-    def _can_move(self, direction):
-        can_move = False
-        if direction in (UP, DOWN):
-            for y in range(GRID_SIZE[0]):
-                cur_slice = self._grid[y] if (direction == DOWN) else np.flip(self._grid[y])
-                can_move |= self._can_pack_or_slide(cur_slice)
-        else:
-            for x in range(GRID_SIZE[1]):
-                cur_slice = self._grid[:, x] if (direction == RIGHT) else np.flip(self._grid[:, x])
-                can_move |= self._can_pack_or_slide(cur_slice)
-        return can_move
-
-    def _valid_moves(self):
-        valid_moves = [
-            1 if self._can_move(UP) else 0,
-            1 if self._can_move(DOWN) else 0,
-            1 if self._can_move(LEFT) else 0,
-            1 if self._can_move(RIGHT) else 0
-        ]
-        return valid_moves
-
-    def _pack(self, vals):
-        reward = 0.0
-        # Remove zeros.
-        a = np.array(vals)
-        a = a[a != 0]
-        # Add adjacent elements.
-        length = len(a)
-        for i in range(0, length):
-            if i + 1 != length and a[i] == a[i + 1]:
-                a[i] *= 2
-                a[i + 1] = 0
-                reward += a[i]
-        # Remove zeros again and expand to the original size.
-        a = a[a != 0]
-        num_pad = len(vals) - len(a)
-        return np.pad(a, pad_width=(0, num_pad)), reward
-
-    def _merge_up_down(self, is_up):
-        reward = 0
-        for y in range(GRID_SIZE[0]):
-            cur_slice = self._grid[y] if is_up else np.flip(self._grid[y])
-            packed, cur_reward = self._pack(cur_slice)
-            reward += cur_reward
-            self._grid[y] = packed if is_up else np.flip(packed)
-        return reward
-
-    def _merge_left_right(self, is_left):
-        reward = 0
-        for x in range(GRID_SIZE[1]):
-            cur_slice = self._grid[:, x] if is_left else np.flip(self._grid[:, x])
-            packed, cur_reward = self._pack(cur_slice)
-            reward += cur_reward
-            self._grid[:, x] = packed if is_left else np.flip(packed)
-        return reward
 
     def reset(self, seed=None, options=None): # pylint: disable=arguments-differ
         super().reset(seed=seed)
@@ -186,7 +237,7 @@ class Gym2048Env(gym.Env):
         self._current_observation = np.array(self._canvas)
 
     def _create_observation(self):
-        valid_moves = np.asarray(self._valid_moves(), dtype=np.int32)
+        valid_moves = _get_valid_moves_jit(self._grid)
         done = np.count_nonzero(valid_moves) == 0
         return {
             'observation': self._current_observation.astype(np.float32) / 256.0,
@@ -195,6 +246,15 @@ class Gym2048Env(gym.Env):
 
     def render(self):
         return self._current_observation
+
+    def _pack(self, a):
+        return _pack_jit(np.asarray(a))
+
+    def _can_pack_or_slide(self, a):
+        return _can_pack_or_slide_jit(np.asarray(a))
+
+    def _can_move(self, action):
+        return _get_valid_moves_jit(self._grid)[action] == 1
 
     def close(self):
         self._canvas.close()

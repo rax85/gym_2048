@@ -4,3 +4,4 @@ Pillow
 absl-py
 matplotlib
 numpy
+numba
