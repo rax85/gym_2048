@@ -61,6 +61,7 @@ class TestGym2048Env(unittest.TestCase):
     def test_render(self):
         """Test rendering the environment."""
         env = Gym2048Env()
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
         env._grid[0, 2] = 0
         env._grid[1, 2] = 64
         env._grid[2, 2] = 128
@@ -138,6 +139,7 @@ class TestGym2048Env(unittest.TestCase):
     def test_move_merge_l(self):
         """Test moving left with merges."""
         env = Gym2048Env()
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
         env._grid[0, 2] = 0
         env._grid[1, 2] = 128
         env._grid[2, 2] = 0
@@ -153,6 +155,7 @@ class TestGym2048Env(unittest.TestCase):
     def test_move_merge_r(self):
         """Test moving right with merges."""
         env = Gym2048Env()
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
         env._grid[0, 2] = 128
         env._grid[1, 2] = 0
         env._grid[2, 2] = 128
@@ -217,6 +220,7 @@ class TestGym2048Env(unittest.TestCase):
     def test_merge_first_slide_second_u(self):
         """Test merging first and then sliding second upwards."""
         env = Gym2048Env()
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
         env._grid[1, 0] = 4
         env._grid[1, 1] = 2
         env._grid[1, 2] = 2

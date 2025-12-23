@@ -2,6 +2,8 @@
 # pylint: disable=too-many-instance-attributes, duplicate-code
 import random
 
+from typing import Any, Tuple, Dict, Optional
+
 import gymnasium as gym
 from absl import logging
 from gymnasium import spaces
@@ -10,6 +12,7 @@ from PIL import Image
 from PIL import ImageDraw
 from PIL import ImageFont
 import numpy as np
+import numpy.typing as npt
 import numba
 
 UP = 0
@@ -41,7 +44,7 @@ CANVAS_SIZE = (GRID_SIZE[0] * (SQUARE_PX + PADDING_PX),
 
 
 @numba.jit(nopython=True)
-def _pack_jit(a):
+def _pack_jit(a: npt.NDArray[np.int32]) -> Tuple[npt.NDArray[np.int32], int]:
     non_zeros = a[a != 0]
     out = np.zeros(a.shape, dtype=a.dtype)
     reward = 0
@@ -63,7 +66,7 @@ def _pack_jit(a):
 
 
 @numba.jit(nopython=True)
-def _can_pack_or_slide_jit(a):
+def _can_pack_or_slide_jit(a: npt.NDArray[np.int32]) -> bool:
     length = len(a)
     last_nonzero_val = -1
     for i in range(length):
@@ -85,7 +88,7 @@ def _can_pack_or_slide_jit(a):
 
 
 @numba.jit(nopython=True)
-def _get_valid_moves_jit(grid):
+def _get_valid_moves_jit(grid: npt.NDArray[np.int32]) -> npt.NDArray[np.int32]:
     moves = np.zeros(4, dtype=np.int32)
     
     # UP (0)
@@ -130,7 +133,7 @@ def _get_valid_moves_jit(grid):
 
 
 @numba.jit(nopython=True)
-def _merge_jit(grid, action):
+def _merge_jit(grid: npt.NDArray[np.int32], action: int) -> int:
     reward = 0
     if action == 0: # UP
         for i in range(4):
@@ -165,7 +168,7 @@ class Gym2048Env(gym.Env):
     """A Gym environment for playing the game 2048."""
     metadata = {'render_modes': ['rgb_array']}
 
-    def __init__(self, render_mode=None):
+    def __init__(self, render_mode: Optional[str] = None) -> None:
         super().__init__()
         self.render_mode = render_mode
         font_properties = font_manager.FontProperties(family='monospace', weight='bold')
@@ -189,7 +192,7 @@ class Gym2048Env(gym.Env):
         self.reset()
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
-    def step(self, action):
+    def step(self, action: int) -> Tuple[Dict[str, Any], float, bool, bool, Dict[str, Any]]:
         reward = 0
         valid_moves = _get_valid_moves_jit(self._grid)
         if valid_moves[action] == 1:
@@ -201,9 +204,9 @@ class Gym2048Env(gym.Env):
             reward = -32
         observation, terminated = self._create_observation()
         truncated = False
-        return observation, reward, terminated, truncated, {}
+        return observation, float(reward), terminated, truncated, {}
 
-    def reset(self, seed=None, options=None): # pylint: disable=arguments-differ
+    def reset(self, *, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         super().reset(seed=seed)
         self._grid = np.zeros(GRID_SIZE, dtype=np.int32)
         self._score = 0
@@ -216,7 +219,7 @@ class Gym2048Env(gym.Env):
         observation, _ = self._create_observation()
         return observation, {}
 
-    def _random_spawn(self):
+    def _random_spawn(self) -> bool:
         candidates = []
         for y in range(GRID_SIZE[0]):
             for x in range(GRID_SIZE[1]):
@@ -227,7 +230,7 @@ class Gym2048Env(gym.Env):
             self._grid[y, x] = random.choice([2, 4])
         return len(candidates) == 0
 
-    def _generate_tile(self, val):
+    def _generate_tile(self, val: int) -> None:
         color = RECT_COLORS[val]
         img = Image.new('RGB', (SQUARE_PX, SQUARE_PX), color=color)
         draw = ImageDraw.Draw(img)
@@ -235,7 +238,7 @@ class Gym2048Env(gym.Env):
             draw.text((8, 18), f'{val}', fill='black', font=self._font)
         self._tile_cache[val] = img
 
-    def _render(self):
+    def _render(self) -> None:
         xmax, ymax = GRID_SIZE
         for x in range(xmax):
             for y in range(ymax):
@@ -248,7 +251,7 @@ class Gym2048Env(gym.Env):
                 self._canvas.paste(tile_img, (rx, ry))
         self._current_observation = np.array(self._canvas)
 
-    def _create_observation(self):
+    def _create_observation(self) -> Tuple[Dict[str, Any], bool]:
         valid_moves = _get_valid_moves_jit(self._grid)
         done = np.count_nonzero(valid_moves) == 0
         return {
@@ -256,17 +259,17 @@ class Gym2048Env(gym.Env):
             'valid_mask': valid_moves
         }, done
 
-    def render(self):
+    def render(self) -> Optional[npt.NDArray[np.uint8]]:
         return self._current_observation
 
-    def _pack(self, a):
+    def _pack(self, a: npt.ArrayLike) -> Tuple[npt.NDArray[np.int32], int]:
         return _pack_jit(np.asarray(a))
 
-    def _can_pack_or_slide(self, a):
+    def _can_pack_or_slide(self, a: npt.ArrayLike) -> bool:
         return _can_pack_or_slide_jit(np.asarray(a))
 
-    def _can_move(self, action):
+    def _can_move(self, action: int) -> bool:
         return _get_valid_moves_jit(self._grid)[action] == 1
 
-    def close(self):
+    def close(self) -> None:
         self._canvas.close()
