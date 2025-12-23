@@ -187,9 +187,20 @@ class Gym2048Env(gym.Env):
             'observation': spaces.Box(low=0, high=1.0, shape=observation_shape, dtype=np.float32),
             'valid_mask': spaces.Box(low=0, high=1, shape=[n_actions], dtype=np.int32)
         })
-        self._background = np.full((CANVAS_SIZE[1], CANVAS_SIZE[0], 3), 255, dtype=np.uint8)
+        
+        # Pre-calculate slices for rendering
+        self._grid_slices = []
+        for x in range(GRID_SIZE[0]):
+            for y in range(GRID_SIZE[1]):
+                rx = int(x * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2)
+                ry = int(y * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2)
+                self._grid_slices.append((slice(ry, ry+SQUARE_PX), slice(rx, rx+SQUARE_PX)))
+        
+        # Pre-calculate positions for spawning
+        self._all_positions = [(y, x) for y in range(GRID_SIZE[0]) for x in range(GRID_SIZE[1])]
+
+        self._background = np.full((CANVAS_SIZE[1], CANVAS_SIZE[0], 3), 255, dtype=np.uint8).astype(np.float32) / 256.0
         self._current_observation = self._background.copy()
-        self._norm_factor = np.float32(1.0 / 256.0)
         self.reset()
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
@@ -220,11 +231,7 @@ class Gym2048Env(gym.Env):
         return observation, {}
 
     def _random_spawn(self) -> bool:
-        candidates = []
-        for y in range(GRID_SIZE[0]):
-            for x in range(GRID_SIZE[1]):
-                if self._grid[y, x] == 0:
-                    candidates.append((y, x))
+        candidates = [pos for pos in self._all_positions if self._grid[pos] == 0]
         if len(candidates) > 0:
             y, x = random.choice(candidates)
             self._grid[y, x] = random.choice([2, 4])
@@ -236,27 +243,18 @@ class Gym2048Env(gym.Env):
         draw = ImageDraw.Draw(img)
         if val > 0:
             draw.text((8, 18), f'{val}', fill='black', font=self._font)
-        self._render_cache[val] = np.array(img)
+        self._render_cache[val] = np.array(img).astype(np.float32) / 256.0
 
     def _render(self) -> None:
-        self._current_observation[:] = self._background
-        xmax, ymax = GRID_SIZE
-        for x in range(xmax):
-            for y in range(ymax):
-                val = self._grid[x, y]
-                if val not in self._render_cache:
-                    self._generate_tile(val)
-                tile_arr = self._render_cache[val]
-                rx = int(x * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2)
-                ry = int(y * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2)
-                self._current_observation[ry:ry+SQUARE_PX, rx:rx+SQUARE_PX] = tile_arr
+        for val, (s_y, s_x) in zip(self._grid.flat, self._grid_slices):
+            self._current_observation[s_y, s_x] = self._render_cache[val]
 
     def _create_observation(self, valid_moves: Optional[npt.NDArray[np.int32]] = None) -> Tuple[Dict[str, Any], bool]:
         if valid_moves is None:
             valid_moves = _get_valid_moves_jit(self._grid)
         done = np.count_nonzero(valid_moves) == 0
         return {
-            'observation': self._current_observation.astype(np.float32) * self._norm_factor,
+            'observation': self._current_observation.copy(),
             'valid_mask': valid_moves
         }, done
 
