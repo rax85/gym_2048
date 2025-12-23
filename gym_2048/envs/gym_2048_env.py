@@ -259,7 +259,7 @@ class Gym2048Env(gym.Env):
         }, done
 
     def render(self) -> Optional[npt.NDArray[np.uint8]]:
-        return self._current_observation
+        return (self._current_observation * 256).astype(np.uint8)
 
     def _pack(self, a: npt.ArrayLike) -> Tuple[npt.NDArray[np.int32], int]:
         return _pack_jit(np.asarray(a))
