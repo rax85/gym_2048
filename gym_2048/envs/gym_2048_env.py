@@ -173,6 +173,10 @@ class Gym2048Env(gym.Env):
         logging.info('Loading font from %s', font_file)
         self._font = ImageFont.truetype(font_file, 24)
 
+        self._tile_cache = {}
+        for val in RECT_COLORS:
+            self._generate_tile(val)
+
         observation_shape = [CANVAS_SIZE[0], CANVAS_SIZE[1], 3]
         n_actions = 4 # up, down, left, right.
         self.action_space = spaces.Discrete(n_actions)
@@ -223,17 +227,25 @@ class Gym2048Env(gym.Env):
             self._grid[y, x] = random.choice([2, 4])
         return len(candidates) == 0
 
+    def _generate_tile(self, val):
+        color = RECT_COLORS[val]
+        img = Image.new('RGB', (SQUARE_PX, SQUARE_PX), color=color)
+        draw = ImageDraw.Draw(img)
+        if val > 0:
+            draw.text((8, 18), f'{val}', fill='black', font=self._font)
+        self._tile_cache[val] = img
+
     def _render(self):
         xmax, ymax = GRID_SIZE
-        draw = ImageDraw.Draw(self._canvas)
         for x in range(xmax):
             for y in range(ymax):
-                rx = x * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2
-                ry = y * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2
                 val = self._grid[x, y]
-                draw.rectangle(((rx, ry), (rx + SQUARE_PX, ry + SQUARE_PX)), fill=RECT_COLORS[val])
-                if val > 0:
-                    draw.text((rx + 8, ry + 18), f'{val}', fill='black', font=self._font)
+                if val not in self._tile_cache:
+                    self._generate_tile(val)
+                tile_img = self._tile_cache[val]
+                rx = int(x * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2)
+                ry = int(y * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2)
+                self._canvas.paste(tile_img, (rx, ry))
         self._current_observation = np.array(self._canvas)
 
     def _create_observation(self):
