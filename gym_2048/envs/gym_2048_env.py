@@ -176,19 +176,20 @@ class Gym2048Env(gym.Env):
         logging.info('Loading font from %s', font_file)
         self._font = ImageFont.truetype(font_file, 24)
 
-        self._tile_cache = {}
+        self._render_cache = {}
         for val in RECT_COLORS:
             self._generate_tile(val)
 
-        observation_shape = [CANVAS_SIZE[0], CANVAS_SIZE[1], 3]
+        observation_shape = [CANVAS_SIZE[1], CANVAS_SIZE[0], 3]
         n_actions = 4 # up, down, left, right.
         self.action_space = spaces.Discrete(n_actions)
         self.observation_space = spaces.Dict({
             'observation': spaces.Box(low=0, high=1.0, shape=observation_shape, dtype=np.float32),
             'valid_mask': spaces.Box(low=0, high=1, shape=[n_actions], dtype=np.int32)
         })
-        self._canvas = Image.new(mode='RGB', size=CANVAS_SIZE, color='white')
-        self._current_observation = np.array(self._canvas)
+        self._background = np.full((CANVAS_SIZE[1], CANVAS_SIZE[0], 3), 255, dtype=np.uint8)
+        self._current_observation = self._background.copy()
+        self._norm_factor = np.float32(1.0 / 256.0)
         self.reset()
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
@@ -210,8 +211,7 @@ class Gym2048Env(gym.Env):
         super().reset(seed=seed)
         self._grid = np.zeros(GRID_SIZE, dtype=np.int32)
         self._score = 0
-        self._canvas = Image.new(mode='RGB', size=CANVAS_SIZE, color='white')
-        self._current_observation = np.array(self._canvas)
+        self._current_observation = self._background.copy()
         if options is None or options != 'nospawn':
             self._random_spawn()
             self._random_spawn()
@@ -236,26 +236,27 @@ class Gym2048Env(gym.Env):
         draw = ImageDraw.Draw(img)
         if val > 0:
             draw.text((8, 18), f'{val}', fill='black', font=self._font)
-        self._tile_cache[val] = img
+        self._render_cache[val] = np.array(img)
 
     def _render(self) -> None:
+        self._current_observation[:] = self._background
         xmax, ymax = GRID_SIZE
         for x in range(xmax):
             for y in range(ymax):
                 val = self._grid[x, y]
-                if val not in self._tile_cache:
+                if val not in self._render_cache:
                     self._generate_tile(val)
-                tile_img = self._tile_cache[val]
+                tile_arr = self._render_cache[val]
                 rx = int(x * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2)
                 ry = int(y * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2)
-                self._canvas.paste(tile_img, (rx, ry))
-        self._current_observation = np.array(self._canvas)
+                self._current_observation[ry:ry+SQUARE_PX, rx:rx+SQUARE_PX] = tile_arr
 
-    def _create_observation(self) -> Tuple[Dict[str, Any], bool]:
-        valid_moves = _get_valid_moves_jit(self._grid)
+    def _create_observation(self, valid_moves: Optional[npt.NDArray[np.int32]] = None) -> Tuple[Dict[str, Any], bool]:
+        if valid_moves is None:
+            valid_moves = _get_valid_moves_jit(self._grid)
         done = np.count_nonzero(valid_moves) == 0
         return {
-            'observation': self._current_observation.astype(np.float32) / 256.0,
+            'observation': self._current_observation.astype(np.float32) * self._norm_factor,
             'valid_mask': valid_moves
         }, done
 
@@ -272,4 +273,4 @@ class Gym2048Env(gym.Env):
         return _get_valid_moves_jit(self._grid)[action] == 1
 
     def close(self) -> None:
-        self._canvas.close()
+        pass
