@@ -171,7 +171,7 @@ class TestGym2048Env(unittest.TestCase):
     def test_move_merge_u(self):
         """Test moving up with merges."""
         env = Gym2048Env()
-        env.reset(options='nospawn')
+        env.reset(options={'nospawn': True})
         env._grid[1, 0] = 0
         env._grid[1, 1] = 128
         env._grid[1, 2] = 0
@@ -187,7 +187,7 @@ class TestGym2048Env(unittest.TestCase):
     def test_move_merge_d(self):
         """Test moving down with merges."""
         env = Gym2048Env()
-        env.reset(options='nospawn')
+        env.reset(options={'nospawn': True})
         env._grid[1, 0] = 128
         env._grid[1, 1] = 0
         env._grid[1, 2] = 128
@@ -289,13 +289,14 @@ class TestGym2048Env(unittest.TestCase):
         env = Gym2048Env()
         _observation, _info = env.reset()
         self.assertIsNotNone(_observation)
-        self.assertEqual(_observation['observation'].dtype, np.float32)
+        self.assertEqual(_observation['observation'].dtype, np.int32)
         self.assertEqual(_observation['valid_mask'].dtype, np.int32)
         env._grid = np.asarray(
             [[16,   4, 256, 32],
              [ 8,  32,  64,  4],
              [32, 128,  16,  2],
-             [16,   8,   2,  2]]
+             [16,   8,   2,  2]],
+            dtype=np.int32
         ).transpose()
         self._save(env, 'move_merge_done0')
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.RIGHT)
@@ -305,7 +306,7 @@ class TestGym2048Env(unittest.TestCase):
         self.assertTrue(done)
         self.assertIsNotNone(_observation['observation'])
         self.assertIsNotNone(_observation['valid_mask'])
-        self.assertEqual(_observation['observation'].dtype, np.float32)
+        self.assertEqual(_observation['observation'].dtype, np.int32)
 
     def test_real_world1(self):
         """Test a real-world scenario 1."""

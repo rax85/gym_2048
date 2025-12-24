@@ -180,11 +180,10 @@ class Gym2048Env(gym.Env):
         for val in RECT_COLORS:
             self._generate_tile(val)
 
-        observation_shape = [CANVAS_SIZE[1], CANVAS_SIZE[0], 3]
         n_actions = 4 # up, down, left, right.
         self.action_space = spaces.Discrete(n_actions)
         self.observation_space = spaces.Dict({
-            'observation': spaces.Box(low=0, high=1.0, shape=observation_shape, dtype=np.float32),
+            'observation': spaces.Box(low=0, high=2**31 - 1, shape=GRID_SIZE, dtype=np.int32),
             'valid_mask': spaces.Box(low=0, high=1, shape=[n_actions], dtype=np.int32)
         })
         
@@ -211,7 +210,6 @@ class Gym2048Env(gym.Env):
             reward = _merge_jit(self._grid, action)
             self._score += reward
             self._random_spawn()
-            self._render()
         else:
             reward = -32
         observation, terminated = self._create_observation()
@@ -222,11 +220,12 @@ class Gym2048Env(gym.Env):
         super().reset(seed=seed)
         self._grid = np.zeros(GRID_SIZE, dtype=np.int32)
         self._score = 0
-        self._current_observation = self._background.copy()
-        if options is None or options != 'nospawn':
+        spawn = True
+        if options is not None and 'nospawn' in options and options['nospawn']:
+            spawn = False
+        if spawn:
             self._random_spawn()
             self._random_spawn()
-        self._render()
         observation, _ = self._create_observation()
         return observation, {}
 
@@ -246,6 +245,7 @@ class Gym2048Env(gym.Env):
         self._render_cache[val] = np.array(img).astype(np.float32) / 256.0
 
     def _render(self) -> None:
+        self._current_observation = self._background.copy()
         for val, (s_y, s_x) in zip(self._grid.flat, self._grid_slices):
             self._current_observation[s_y, s_x] = self._render_cache[val]
 
@@ -254,11 +254,12 @@ class Gym2048Env(gym.Env):
             valid_moves = _get_valid_moves_jit(self._grid)
         done = np.count_nonzero(valid_moves) == 0
         return {
-            'observation': self._current_observation.copy(),
+            'observation': self._grid.copy(),
             'valid_mask': valid_moves
         }, done
 
     def render(self) -> Optional[npt.NDArray[np.uint8]]:
+        self._render()
         return (self._current_observation * 256).astype(np.uint8)
 
     def _pack(self, a: npt.ArrayLike) -> Tuple[npt.NDArray[np.int32], int]:
