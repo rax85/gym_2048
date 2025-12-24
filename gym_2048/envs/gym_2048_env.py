@@ -25,19 +25,24 @@ PADDING_PX = 8
 SQUARE_PX = 64
 
 RECT_COLORS = {
-    0:    (142, 142, 147),
-    2:    (0,   113, 164),
-    4:    (178, 80,  0),
-    8:    (0,   122, 255),
-    16:   (52,  199, 89),
-    32:   (88,  86,  214),
-    64:   (255, 149, 0),
-    128:  (255, 45,  85),
-    256:  (175, 82,  222),
-    512:  (255, 59,  48),
-    1024: (90,  200, 250),
-    2048: (255, 204, 0)
+    0:    (205, 193, 180),
+    2:    (238, 228, 218),
+    4:    (237, 224, 200),
+    8:    (242, 177, 121),
+    16:   (245, 149, 99),
+    32:   (246, 124, 95),
+    64:   (246, 94, 59),
+    128:  (237, 207, 114),
+    256:  (237, 204, 97),
+    512:  (237, 200, 80),
+    1024: (237, 197, 63),
+    2048: (237, 194, 46)
 }
+
+TEXT_COLOR_DARK = (119, 110, 101)
+TEXT_COLOR_LIGHT = (249, 246, 242)
+
+BACKGROUND_COLOR = (187, 173, 160)
 
 CANVAS_SIZE = (GRID_SIZE[0] * (SQUARE_PX + PADDING_PX),
                GRID_SIZE[1] * (SQUARE_PX + PADDING_PX))
@@ -171,7 +176,7 @@ class Gym2048Env(gym.Env):
     def __init__(self, render_mode: Optional[str] = None) -> None:
         super().__init__()
         self.render_mode = render_mode
-        font_properties = font_manager.FontProperties(family='monospace', weight='bold')
+        font_properties = font_manager.FontProperties(family='sans-serif', weight='bold')
         font_file = font_manager.findfont(font_properties)
         logging.info('Loading font from %s', font_file)
         self._font = ImageFont.truetype(font_file, 24)
@@ -198,7 +203,7 @@ class Gym2048Env(gym.Env):
         # Pre-calculate positions for spawning
         self._all_positions = [(y, x) for y in range(GRID_SIZE[0]) for x in range(GRID_SIZE[1])]
 
-        self._background = np.full((CANVAS_SIZE[1], CANVAS_SIZE[0], 3), 255, dtype=np.uint8).astype(np.float32) / 256.0
+        self._background = np.full((CANVAS_SIZE[1], CANVAS_SIZE[0], 3), BACKGROUND_COLOR, dtype=np.uint8).astype(np.float32) / 256.0
         self._current_observation = self._background.copy()
         self.reset()
         logging.info('Canvas size is %s', CANVAS_SIZE)
@@ -241,7 +246,9 @@ class Gym2048Env(gym.Env):
         img = Image.new('RGB', (SQUARE_PX, SQUARE_PX), color=color)
         draw = ImageDraw.Draw(img)
         if val > 0:
-            draw.text((8, 18), f'{val}', fill='black', font=self._font)
+            text = f'{val}'
+            text_color = TEXT_COLOR_DARK if val <= 4 else TEXT_COLOR_LIGHT
+            draw.text((SQUARE_PX / 2, SQUARE_PX / 2), text, fill=text_color, font=self._font, anchor="mm")
         self._render_cache[val] = np.array(img).astype(np.float32) / 256.0
 
     def _render(self) -> None:
