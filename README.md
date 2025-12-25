@@ -15,7 +15,7 @@ This environment implements the classic 2048 game. The game is played on a 4x4 g
 To install the environment, you can use pip:
 
 ```bash
-pip install gym_2048
+pip install git+https://github.com/rax85/gym_2048.git
 ```
 
 ## Usage
