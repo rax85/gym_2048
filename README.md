@@ -26,7 +26,7 @@ To use the environment, you can use the following code:
 import gymnasium as gym
 import gym_2048
 
-env = gym.make('2048-v0')
+env = gym.make('gym_2048/2048-v0')
 
 observation, info = env.reset()
 done = False
