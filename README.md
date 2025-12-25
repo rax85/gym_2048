@@ -2,6 +2,10 @@
 
 A simple Gymnasium environment for the game 2048.
 
+[![Python package](https://github.com/rax85/gym_2048/actions/workflows/python-package.yml/badge.svg)](https://github.com/rax85/gym_2048/actions/workflows/python-package.yml)
+[![Code style: black](https://img.shields.io/badge/code%20style-black-000000.svg)](https://github.com/psf/black)
+
+
 ## Description
 
 This environment implements the classic 2048 game. The game is played on a 4x4 grid. The goal is to slide tiles on the grid to combine tiles of the same value and create a tile with the value 2048.
