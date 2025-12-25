@@ -189,7 +189,8 @@ class Gym2048Env(gym.Env):
         self.action_space = spaces.Discrete(n_actions)
         self.observation_space = spaces.Dict({
             'observation': spaces.Box(low=0, high=2**31 - 1, shape=GRID_SIZE, dtype=np.int32),
-            'valid_mask': spaces.Box(low=0, high=1, shape=[n_actions], dtype=np.int32)
+            'valid_mask': spaces.Box(low=0, high=1, shape=[n_actions], dtype=np.int32),
+            'total_score': spaces.Box(low=0, high=2**31 - 1, shape=(1,), dtype=np.int32)
         })
         
         # Pre-calculate slices for rendering
@@ -262,7 +263,8 @@ class Gym2048Env(gym.Env):
         done = np.count_nonzero(valid_moves) == 0
         return {
             'observation': self._grid.copy(),
-            'valid_mask': valid_moves
+            'valid_mask': valid_moves,
+            'total_score': np.array([self._score], dtype=np.int32)
         }, done
 
     def render(self) -> Optional[npt.NDArray[np.uint8]]:

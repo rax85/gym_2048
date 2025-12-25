@@ -46,10 +46,11 @@ The action space is a `Discrete(4)` space, where the actions are:
 
 ## Observation Space
 
-The observation space is a `Dict` with two keys:
+The observation space is a `Dict` with three keys:
 
 *   `'observation'`: A `Box` of shape `(4, 4)` representing the integer values of the game board.
 *   `'valid_mask'`: A `Box` of shape `(4,)` representing a binary mask of valid actions.
+*   `'total_score'`: A `Box` of shape `(1,)` representing the total score of the game.
 
 ## Rewards
 

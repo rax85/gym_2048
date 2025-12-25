@@ -306,6 +306,7 @@ class TestGym2048Env(unittest.TestCase):
         self.assertTrue(done)
         self.assertIsNotNone(_observation['observation'])
         self.assertIsNotNone(_observation['valid_mask'])
+        self.assertIsNotNone(_observation['total_score'])
         self.assertEqual(_observation['observation'].dtype, np.int32)
 
     def test_real_world1(self):
@@ -425,6 +426,28 @@ class TestGym2048Env(unittest.TestCase):
         ).transpose()
         env.step(gym_2048_env.LEFT)
         self.assertEqual(env._score, 12)
+
+    def test_observation_has_score(self):
+        """Test that the observation contains the correct total score."""
+        env = Gym2048Env()
+        env.reset()
+        env._grid = np.asarray(
+            [[2, 2, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0]]
+        ).transpose()
+        observation, _, _, _, _ = env.step(gym_2048_env.LEFT)
+        self.assertEqual(observation['total_score'][0], 4)
+        
+        env._grid = np.asarray(
+            [[4, 4, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0],
+             [0, 0, 0, 0]]
+        ).transpose()
+        observation, _, _, _, _ = env.step(gym_2048_env.LEFT)
+        self.assertEqual(observation['total_score'][0], 12)
 
 
     def test_game_over(self):
