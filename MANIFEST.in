@@ -1,0 +1,5 @@
+include README.md
+include LICENSE
+include requirements.txt
+include *.png
+recursive-include gym_2048 *.png
