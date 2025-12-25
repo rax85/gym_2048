@@ -1,7 +1,7 @@
-gymnasium
-setuptools
-Pillow
-absl-py
-matplotlib
-numpy
-numba
+gymnasium>=1.2.3
+setuptools>=80.9.0
+Pillow>=11.3.0
+absl-py>=2.3.1
+matplotlib>=3.10.8
+numpy>=2.3.5
+numba>=0.63.1
