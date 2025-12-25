@@ -449,7 +449,6 @@ class TestGym2048Env(unittest.TestCase):
         observation, _, _, _, _ = env.step(gym_2048_env.LEFT)
         self.assertEqual(observation['total_score'][0], 12)
 
-
     def test_game_over(self):
         """Test that the game over condition is met."""
         env = Gym2048Env()

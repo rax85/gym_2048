@@ -210,6 +210,7 @@ class Gym2048Env(gym.Env):
         logging.info('Canvas size is %s', CANVAS_SIZE)
 
     def step(self, action: int) -> Tuple[Dict[str, Any], float, bool, bool, Dict[str, Any]]:
+        """Perform one step in the environment."""
         reward = 0
         valid_moves = _get_valid_moves_jit(self._grid)
         if valid_moves[action] == 1:
@@ -223,6 +224,7 @@ class Gym2048Env(gym.Env):
         return observation, float(reward), terminated, truncated, {}
 
     def reset(self, *, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None) -> Tuple[Dict[str, Any], Dict[str, Any]]:
+        """Reset the environment to the initial state."""
         super().reset(seed=seed)
         self._grid = np.zeros(GRID_SIZE, dtype=np.int32)
         self._score = 0
@@ -236,6 +238,7 @@ class Gym2048Env(gym.Env):
         return observation, {}
 
     def _random_spawn(self) -> bool:
+        """Spawn a new tile at a random empty position."""
         candidates = [pos for pos in self._all_positions if self._grid[pos] == 0]
         if len(candidates) > 0:
             y, x = random.choice(candidates)
@@ -243,21 +246,30 @@ class Gym2048Env(gym.Env):
         return len(candidates) == 0
 
     def _generate_tile(self, val: int) -> None:
+        """Generate the image for a tile value."""
         color = RECT_COLORS[val]
         img = Image.new('RGB', (SQUARE_PX, SQUARE_PX), color=color)
         draw = ImageDraw.Draw(img)
         if val > 0:
             text = f'{val}'
             text_color = TEXT_COLOR_DARK if val <= 4 else TEXT_COLOR_LIGHT
-            draw.text((SQUARE_PX / 2, SQUARE_PX / 2), text, fill=text_color, font=self._font, anchor="mm")
+            draw.text(
+                (SQUARE_PX / 2, SQUARE_PX / 2),
+                text,
+                fill=text_color,
+                font=self._font,
+                anchor="mm"
+            )
         self._render_cache[val] = np.array(img).astype(np.float32) / 256.0
 
     def _render(self) -> None:
+        """Update the current observation image."""
         self._current_observation = self._background.copy()
         for val, (s_y, s_x) in zip(self._grid.flat, self._grid_slices):
             self._current_observation[s_y, s_x] = self._render_cache[val]
 
     def _create_observation(self, valid_moves: Optional[npt.NDArray[np.int32]] = None) -> Tuple[Dict[str, Any], bool]:
+        """Create the observation dictionary and check for termination."""
         if valid_moves is None:
             valid_moves = _get_valid_moves_jit(self._grid)
         done = np.count_nonzero(valid_moves) == 0
@@ -268,17 +280,21 @@ class Gym2048Env(gym.Env):
         }, done
 
     def render(self) -> Optional[npt.NDArray[np.uint8]]:
+        """Return the current observation as an RGB array."""
         self._render()
         return (self._current_observation * 256).astype(np.uint8)
 
     def _pack(self, a: npt.ArrayLike) -> Tuple[npt.NDArray[np.int32], int]:
+        """Pack a row or column."""
         return _pack_jit(np.asarray(a))
 
     def _can_pack_or_slide(self, a: npt.ArrayLike) -> bool:
+        """Check if a row or column can be packed or slid."""
         return _can_pack_or_slide_jit(np.asarray(a))
 
     def _can_move(self, action: int) -> bool:
+        """Check if a specific move is valid."""
         return _get_valid_moves_jit(self._grid)[action] == 1
 
     def close(self) -> None:
-        pass
+        """Close the environment."""
