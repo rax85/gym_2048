@@ -425,6 +425,18 @@ class TestGym2048Env(unittest.TestCase):
         _observation, _reward, terminated, _truncated, _info = env.step(gym_2048_env.UP)
         self.assertTrue(terminated)
 
+    def test_2048_termination(self):
+        """Test that the game terminates when 2048 is reached."""
+        env = Gym2048Env()
+        env.reset(options={"nospawn": True})
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
+        env._grid[0, 0] = 1024
+        env._grid[1, 0] = 1024
+        _observation, reward, terminated, _truncated, _info = env.step(gym_2048_env.LEFT)
+        self.assertEqual(reward, 2048)
+        self.assertTrue(terminated)
+        self.assertEqual(env._grid[0, 0], 2048)
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -343,7 +343,7 @@ class Gym2048Env(gym.Env):
         """Create the observation dictionary and check for termination."""
         if valid_moves is None:
             valid_moves = _get_valid_moves_jit(self._grid)
-        done = np.count_nonzero(valid_moves) == 0
+        done = (np.count_nonzero(valid_moves) == 0) or (np.any(self._grid == 2048))
         return {
             "observation": self._grid.copy(),
             "valid_mask": valid_moves,
