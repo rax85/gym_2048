@@ -437,6 +437,42 @@ class TestGym2048Env(unittest.TestCase):
         self.assertTrue(terminated)
         self.assertEqual(env._grid[0, 0], 2048)
 
+    def test_move_tracking(self):
+        """Test that the environment correctly tracks valid and invalid moves."""
+        env = Gym2048Env()
+        env.reset(options={"nospawn": True})
+        # Ensure we have a known state
+        env._grid = np.asarray(
+            [[2, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+        ).transpose()
+        
+        # Valid move (RIGHT)
+        env.step(gym_2048_env.RIGHT)
+        self.assertEqual(env._total_moves, 1)
+        self.assertEqual(env._valid_moves, 1)
+        self.assertEqual(env._invalid_moves, 0)
+        self.assertEqual(len(env._move_history), 1)
+        self.assertEqual(env._move_history[0], (gym_2048_env.RIGHT, True))
+
+        # Force grid state to make RIGHT invalid
+        env._grid = np.asarray(
+            [[0, 0, 0, 2], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
+        ).transpose()
+
+        # Invalid move (RIGHT again)
+        env.step(gym_2048_env.RIGHT)
+        self.assertEqual(env._total_moves, 2)
+        self.assertEqual(env._valid_moves, 1)
+        self.assertEqual(env._invalid_moves, 1)
+        self.assertEqual(len(env._move_history), 2)
+        self.assertEqual(env._move_history[1], (gym_2048_env.RIGHT, False))
+
+        # Check history limit (8)
+        for _ in range(10):
+            env.step(gym_2048_env.UP)
+        
+        self.assertEqual(len(env._move_history), 8)
+
 
 if __name__ == "__main__":
     unittest.main()

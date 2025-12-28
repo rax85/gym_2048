@@ -3,7 +3,7 @@
 # pylint: disable=too-many-instance-attributes, duplicate-code
 import random
 
-from typing import Any, Tuple, Dict, Optional
+from typing import Any, Tuple, Dict, Optional, List
 
 import gymnasium as gym
 from absl import logging
@@ -25,6 +25,7 @@ GRID_SIZE = (4, 4)
 PADDING_PX = 8
 SQUARE_PX = 64
 HEADER_PX = 80
+FOOTER_PX = 64
 
 RECT_COLORS = {
     0: (205, 193, 180),
@@ -45,10 +46,14 @@ TEXT_COLOR_DARK = (119, 110, 101)
 TEXT_COLOR_LIGHT = (249, 246, 242)
 
 BACKGROUND_COLOR = (187, 173, 160)
+FOOTER_COLOR = (60, 50, 50)
+
+VALID_COLOR = (119, 175, 87)
+INVALID_COLOR = (215, 84, 85)
 
 CANVAS_SIZE = (
     GRID_SIZE[0] * (SQUARE_PX + PADDING_PX),
-    GRID_SIZE[1] * (SQUARE_PX + PADDING_PX) + HEADER_PX,
+    GRID_SIZE[1] * (SQUARE_PX + PADDING_PX) + HEADER_PX + FOOTER_PX,
 )
 
 
@@ -189,6 +194,7 @@ class Gym2048Env(gym.Env):
         self._font = ImageFont.truetype(font_file, 24)
         self._score_label_font = ImageFont.truetype(font_file, 16)
         self._score_font = ImageFont.truetype(font_file, 24)
+        self._stats_font = ImageFont.truetype(font_file, 12)
 
         self._render_cache = {}
         for val in RECT_COLORS:
@@ -241,12 +247,21 @@ class Gym2048Env(gym.Env):
         """Perform one step in the environment."""
         reward = 0
         valid_moves = _get_valid_moves_jit(self._grid)
-        if valid_moves[action] == 1:
+        is_valid = valid_moves[action] == 1
+        self._total_moves += 1
+        if is_valid:
+            self._valid_moves += 1
             reward = _merge_jit(self._grid, action)
             self._score += reward
             self._random_spawn()
         else:
+            self._invalid_moves += 1
             reward = -32
+
+        self._move_history.append((action, is_valid))
+        if len(self._move_history) > 8:
+            self._move_history.pop(0)
+
         observation, terminated = self._create_observation()
         truncated = False
         return observation, float(reward), terminated, truncated, {}
@@ -258,6 +273,10 @@ class Gym2048Env(gym.Env):
         super().reset(seed=seed)
         self._grid = np.zeros(GRID_SIZE, dtype=np.int32)
         self._score = 0
+        self._total_moves = 0
+        self._valid_moves = 0
+        self._invalid_moves = 0
+        self._move_history: List[Tuple[int, bool]] = []
         spawn = True
         if options is not None and "nospawn" in options and options["nospawn"]:
             spawn = False
@@ -291,6 +310,65 @@ class Gym2048Env(gym.Env):
                 anchor="mm",
             )
         self._render_cache[val] = np.array(img).astype(np.float32) / 256.0
+
+    def _draw_arrow(
+        self, draw: ImageDraw.ImageDraw, x: int, y: int, action: int, color: Tuple[int, int, int]
+    ) -> None:
+        """Draw an arrow representing a move with a shaft and head."""
+        # Arrow dimensions
+        # Total size reduced: fits within roughly 16x16 box (radius 8)
+        radius = 8
+        shaft_w = 4
+        # Points relative to center (x, y)
+        
+        if action == UP:
+            # Pointing Up
+            # Head tip at top
+            points = [
+                (x, y - radius),                   # Tip
+                (x + 5, y),                        # Head Right Base
+                (x + 2, y),                        # Shaft Top Right
+                (x + 2, y + radius),               # Shaft Bottom Right
+                (x - 2, y + radius),               # Shaft Bottom Left
+                (x - 2, y),                        # Shaft Top Left
+                (x - 5, y)                         # Head Left Base
+            ]
+        elif action == DOWN:
+            # Pointing Down
+            points = [
+                (x, y + radius),                   # Tip
+                (x + 5, y),                        # Head Right Base
+                (x + 2, y),                        # Shaft Top Right
+                (x + 2, y - radius),               # Shaft Bottom Right
+                (x - 2, y - radius),               # Shaft Bottom Left
+                (x - 2, y),                        # Shaft Top Left
+                (x - 5, y)                         # Head Left Base
+            ]
+        elif action == LEFT:
+            # Pointing Left
+            points = [
+                (x - radius, y),                   # Tip
+                (x, y - 5),                        # Head Top Base
+                (x, y - 2),                        # Shaft Top Left
+                (x + radius, y - 2),               # Shaft Top Right
+                (x + radius, y + 2),               # Shaft Bottom Right
+                (x, y + 2),                        # Shaft Bottom Left
+                (x, y + 5)                         # Head Bottom Base
+            ]
+        elif action == RIGHT:
+            # Pointing Right
+            points = [
+                (x + radius, y),                   # Tip
+                (x, y - 5),                        # Head Top Base
+                (x, y - 2),                        # Shaft Top Left
+                (x - radius, y - 2),               # Shaft Top Right
+                (x - radius, y + 2),               # Shaft Bottom Right
+                (x, y + 2),                        # Shaft Bottom Left
+                (x, y + 5)                         # Head Bottom Base
+            ]
+        else:
+            return
+        draw.polygon(points, fill=color)
 
     def _render(self) -> None:
         """Update the current observation image."""
@@ -336,6 +414,45 @@ class Gym2048Env(gym.Env):
 
         for val, (s_y, s_x) in zip(self._grid.flat, self._grid_slices):
             self._current_observation[s_y, s_x] = self._render_cache[val]
+
+        # Draw Footer
+        footer_y_start = CANVAS_SIZE[1] - FOOTER_PX
+        footer = Image.new("RGB", (CANVAS_SIZE[0], FOOTER_PX), color=FOOTER_COLOR)
+        draw_footer = ImageDraw.Draw(footer)
+
+        # Stats text
+        stats_text = (
+            f"Total: {self._total_moves}  "
+            f"Valid: {self._valid_moves}  "
+            f"Invalid: {self._invalid_moves}"
+        )
+        
+        # Draw "Total" in light color, others in their colors
+        # Need to draw them one by one for different colors
+        x_off = 10
+        y_off = 10
+        
+        txt = f"Total: {self._total_moves}"
+        draw_footer.text((x_off, y_off), txt, fill=TEXT_COLOR_LIGHT, font=self._stats_font)
+        x_off += draw_footer.textbbox((x_off, y_off), txt, font=self._stats_font)[2] - x_off + 15
+        
+        txt = f"Valid: {self._valid_moves}"
+        draw_footer.text((x_off, y_off), txt, fill=VALID_COLOR, font=self._stats_font)
+        x_off += draw_footer.textbbox((x_off, y_off), txt, font=self._stats_font)[2] - x_off + 15
+        
+        txt = f"Invalid: {self._invalid_moves}"
+        draw_footer.text((x_off, y_off), txt, fill=INVALID_COLOR, font=self._stats_font)
+
+        # Move history arrows
+        arrow_y = y_off + 30
+        arrow_x_start = 20
+        arrow_spacing = 30
+        for i, (action, is_valid) in enumerate(self._move_history):
+            color = VALID_COLOR if is_valid else INVALID_COLOR
+            self._draw_arrow(draw_footer, arrow_x_start + i * arrow_spacing, arrow_y, action, color)
+
+        footer_arr = np.array(footer).astype(np.float32) / 256.0
+        self._current_observation[footer_y_start:, :] = footer_arr
 
     def _create_observation(
         self, valid_moves: Optional[npt.NDArray[np.int32]] = None
