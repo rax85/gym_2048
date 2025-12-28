@@ -195,6 +195,7 @@ class Gym2048Env(gym.Env):
         self._score_label_font = ImageFont.truetype(font_file, 16)
         self._score_font = ImageFont.truetype(font_file, 24)
         self._stats_font = ImageFont.truetype(font_file, 12)
+        self._game_over_font = ImageFont.truetype(font_file, 20)
 
         self._render_cache = {}
         for val in RECT_COLORS:
@@ -377,6 +378,22 @@ class Gym2048Env(gym.Env):
         # Draw Score Header
         header = Image.new("RGB", (CANVAS_SIZE[0], HEADER_PX), color=BACKGROUND_COLOR)
         draw = ImageDraw.Draw(header)
+
+        # Check for Game Over
+        if np.count_nonzero(_get_valid_moves_jit(self._grid)) == 0:
+            go_box_width = 120
+            go_box_height = 60
+            margin = 10
+            x_box_go = margin
+            y_box_go = (HEADER_PX - go_box_height) // 2
+
+            draw.text(
+                (x_box_go + go_box_width / 2, y_box_go + 30),
+                "GAME OVER",
+                fill=(0, 0, 128),
+                font=self._game_over_font,
+                anchor="mm",
+            )
 
         # Draw Score Box
         score_box_width = 120

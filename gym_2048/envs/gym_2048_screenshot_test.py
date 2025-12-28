@@ -81,6 +81,35 @@ class TestGym2048Screenshot(unittest.TestCase):
             # Compare to baseline
             self._compare_screenshots("initial_state_render")
 
+    def test_game_over_render_matches_baseline(self):
+        """Test that the game over render state matches a baseline screenshot."""
+        self.env.reset()
+        # Set a deadlock state (Game Over)
+        # 2 4 2 4
+        # 4 2 4 2
+        # 2 4 2 4
+        # 4 2 4 2
+        self.env._grid = np.asarray([
+            [2, 4, 2, 4],
+            [4, 2, 4, 2],
+            [2, 4, 2, 4],
+            [4, 2, 4, 2]
+        ], dtype=np.int32)
+        self.env._score = 1000  # Set a fixed score for consistency
+
+        # Save the current screenshot
+        self._save_screenshot(self.env, "game_over_render", is_baseline=False)
+
+        # If an environment variable is set, update the baseline
+        if os.environ.get("UPDATE_BASELINES") == "1":
+            self._save_screenshot(self.env, "game_over_render", is_baseline=True)
+            print(
+                f"Updated baseline for 'game_over_render' at {self._get_screenshot_path('game_over_render', True)}"
+            )
+        else:
+            # Compare to baseline
+            self._compare_screenshots("game_over_render")
+
 
 if __name__ == "__main__":
     unittest.main()
