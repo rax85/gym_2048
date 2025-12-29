@@ -75,16 +75,14 @@ class TestGym2048Env(unittest.TestCase):
         """Test moving left with no merges."""
         env = Gym2048Env()
         env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
-        env._grid[0, 2] = 0
-        env._grid[1, 2] = 128
-        env._grid[2, 2] = 0
-        env._grid[3, 2] = 256
+        env._grid[2, 1] = 128
+        env._grid[2, 3] = 256
         self._save(env, "move_nomerge_l0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.LEFT)
         self._save(env, "move_nomerge_l1")
 
-        self.assertEqual(env._grid[0, 2], 128)
-        self.assertEqual(env._grid[1, 2], 256)
+        self.assertEqual(env._grid[2, 0], 128)
+        self.assertEqual(env._grid[2, 1], 256)
         self.assertFalse(done)
         self.assertEqual(reward, 0)
 
@@ -92,16 +90,14 @@ class TestGym2048Env(unittest.TestCase):
         """Test moving right with no merges."""
         env = Gym2048Env()
         env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
-        env._grid[0, 2] = 128
-        env._grid[1, 2] = 0
+        env._grid[2, 0] = 128
         env._grid[2, 2] = 256
-        env._grid[3, 2] = 0
         self._save(env, "test_move_nomerge_r0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.RIGHT)
         self._save(env, "test_move_nomerge_r1")
 
         self.assertEqual(env._grid[2, 2], 128)
-        self.assertEqual(env._grid[3, 2], 256)
+        self.assertEqual(env._grid[2, 3], 256)
         self.assertFalse(done)
         self.assertEqual(reward, 0)
 
@@ -109,16 +105,14 @@ class TestGym2048Env(unittest.TestCase):
         """Test moving up with no merges."""
         env = Gym2048Env()
         env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
-        env._grid[1, 0] = 0
-        env._grid[1, 1] = 128
-        env._grid[1, 2] = 0
-        env._grid[1, 3] = 256
+        env._grid[1, 2] = 128
+        env._grid[3, 2] = 256
         self._save(env, "test_move_nomerge_u0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.UP)
         self._save(env, "test_move_nomerge_u1")
 
-        self.assertEqual(env._grid[1, 0], 128)
-        self.assertEqual(env._grid[1, 1], 256)
+        self.assertEqual(env._grid[0, 2], 128)
+        self.assertEqual(env._grid[1, 2], 256)
         self.assertFalse(done)
         self.assertEqual(reward, 0)
 
@@ -126,16 +120,14 @@ class TestGym2048Env(unittest.TestCase):
         """Test moving down with no merges."""
         env = Gym2048Env()
         env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
-        env._grid[1, 0] = 128
-        env._grid[1, 1] = 0
-        env._grid[1, 2] = 256
-        env._grid[1, 3] = 0
+        env._grid[0, 2] = 128
+        env._grid[2, 2] = 256
         self._save(env, "test_move_nomerge_d0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.DOWN)
         self._save(env, "test_move_nomerge_d1")
 
-        self.assertEqual(env._grid[1, 2], 128)
-        self.assertEqual(env._grid[1, 3], 256)
+        self.assertEqual(env._grid[2, 2], 128)
+        self.assertEqual(env._grid[3, 2], 256)
         self.assertFalse(done)
         self.assertEqual(reward, 0)
 
@@ -143,15 +135,13 @@ class TestGym2048Env(unittest.TestCase):
         """Test moving left with merges."""
         env = Gym2048Env()
         env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
-        env._grid[0, 2] = 0
-        env._grid[1, 2] = 128
-        env._grid[2, 2] = 0
-        env._grid[3, 2] = 128
+        env._grid[2, 1] = 128
+        env._grid[2, 3] = 128
         self._save(env, "move_merge_l0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.LEFT)
         self._save(env, "move_merge_l1")
 
-        self.assertEqual(env._grid[0, 2], 256)
+        self.assertEqual(env._grid[2, 0], 256)
         self.assertFalse(done)
         self.assertEqual(reward, 256)
 
@@ -159,15 +149,13 @@ class TestGym2048Env(unittest.TestCase):
         """Test moving right with merges."""
         env = Gym2048Env()
         env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
-        env._grid[0, 2] = 128
-        env._grid[1, 2] = 0
+        env._grid[2, 0] = 128
         env._grid[2, 2] = 128
-        env._grid[3, 2] = 0
         self._save(env, "move_merge_r0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.RIGHT)
         self._save(env, "move_merge_r1")
 
-        self.assertEqual(env._grid[3, 2], 256)
+        self.assertEqual(env._grid[2, 3], 256)
         self.assertFalse(done)
         self.assertEqual(reward, 256)
 
@@ -175,15 +163,13 @@ class TestGym2048Env(unittest.TestCase):
         """Test moving up with merges."""
         env = Gym2048Env()
         env.reset(options={"nospawn": True})
-        env._grid[1, 0] = 0
-        env._grid[1, 1] = 128
-        env._grid[1, 2] = 0
-        env._grid[1, 3] = 128
+        env._grid[1, 2] = 128
+        env._grid[3, 2] = 128
         self._save(env, "move_merge_u0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.UP)
         self._save(env, "move_merge_u1")
 
-        self.assertEqual(env._grid[1, 0], 256)
+        self.assertEqual(env._grid[0, 2], 256)
         self.assertFalse(done)
         self.assertEqual(reward, 256)
 
@@ -191,15 +177,13 @@ class TestGym2048Env(unittest.TestCase):
         """Test moving down with merges."""
         env = Gym2048Env()
         env.reset(options={"nospawn": True})
-        env._grid[1, 0] = 128
-        env._grid[1, 1] = 0
-        env._grid[1, 2] = 128
-        env._grid[1, 3] = 0
+        env._grid[0, 2] = 128
+        env._grid[2, 2] = 128
         self._save(env, "move_merge_d0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.DOWN)
         self._save(env, "move_merge_d1")
 
-        self.assertEqual(env._grid[1, 3], 256)
+        self.assertEqual(env._grid[3, 2], 256)
         self.assertFalse(done)
         self.assertEqual(reward, 256)
 
@@ -207,16 +191,16 @@ class TestGym2048Env(unittest.TestCase):
         """Test moving with a double merge."""
         env = Gym2048Env()
         env._grid = np.zeros_like(env._grid)
-        env._grid[1, 0] = 128
-        env._grid[1, 1] = 128
+        env._grid[0, 2] = 128
         env._grid[1, 2] = 128
-        env._grid[1, 3] = 128
+        env._grid[2, 2] = 128
+        env._grid[3, 2] = 128
         self._save(env, "move_merge_double0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.DOWN)
         self._save(env, "move_merge_double1")
 
-        self.assertEqual(env._grid[1, 2], 256)
-        self.assertEqual(env._grid[1, 3], 256)
+        self.assertEqual(env._grid[2, 2], 256)
+        self.assertEqual(env._grid[3, 2], 256)
         self.assertFalse(done)
         self.assertEqual(reward, 512)
 
@@ -224,17 +208,17 @@ class TestGym2048Env(unittest.TestCase):
         """Test merging first and then sliding second upwards."""
         env = Gym2048Env()
         env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
-        env._grid[1, 0] = 4
-        env._grid[1, 1] = 2
+        env._grid[0, 2] = 4
         env._grid[1, 2] = 2
-        env._grid[1, 3] = 2
+        env._grid[2, 2] = 2
+        env._grid[3, 2] = 2
         self._save(env, "test_merge_first_slide_second_u0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.UP)
         self._save(env, "test_merge_first_slide_second_u1")
 
-        self.assertEqual(env._grid[1, 0], 4)
-        self.assertEqual(env._grid[1, 1], 4)
-        self.assertEqual(env._grid[1, 2], 2)
+        self.assertEqual(env._grid[0, 2], 4)
+        self.assertEqual(env._grid[1, 2], 4)
+        self.assertEqual(env._grid[2, 2], 2)
         self.assertFalse(done)
         self.assertEqual(reward, 4)
 
@@ -297,7 +281,7 @@ class TestGym2048Env(unittest.TestCase):
         env._grid = np.asarray(
             [[16, 4, 256, 32], [8, 32, 64, 4], [32, 128, 16, 2], [16, 8, 2, 2]],
             dtype=np.int32,
-        ).transpose()
+        )
         self._save(env, "move_merge_done0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.RIGHT)
         self._save(env, "move_merge_done1")
@@ -315,19 +299,24 @@ class TestGym2048Env(unittest.TestCase):
         env.reset()
         env._grid = np.asarray(
             [[0, 4, 8, 4], [0, 2, 8, 2], [0, 4, 8, 2], [2, 8, 4, 2]]
-        ).transpose()
+        )
         self._save(env, "test_real_world1_0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.UP)
         self._save(env, "test_real_world1_1")
 
         self.assertFalse(done)
         self.assertEqual(reward, 20)
-        self.assertEqual(env._grid[2, 0], 16)
-        self.assertEqual(env._grid[2, 1], 8)
+        self.assertEqual(env._grid[0, 0], 2)
+        self.assertEqual(env._grid[0, 1], 4)
+        self.assertEqual(env._grid[0, 2], 16)
+        self.assertEqual(env._grid[0, 3], 4)
+        self.assertEqual(env._grid[1, 1], 2)
+        self.assertEqual(env._grid[1, 2], 8)
+        self.assertEqual(env._grid[1, 3], 4)
+        self.assertEqual(env._grid[2, 1], 4)
         self.assertEqual(env._grid[2, 2], 4)
-        self.assertEqual(env._grid[3, 0], 4)
-        self.assertEqual(env._grid[3, 1], 4)
-        self.assertEqual(env._grid[3, 2], 2)
+        self.assertEqual(env._grid[2, 3], 2)
+        self.assertEqual(env._grid[3, 1], 8)
 
     def test_cant_move_r(self):
         """Test that the agent cannot move right."""
@@ -335,7 +324,7 @@ class TestGym2048Env(unittest.TestCase):
         env.reset()
         env._grid = np.asarray(
             [[0, 0, 0, 2], [0, 0, 0, 2], [0, 0, 0, 2], [0, 0, 0, 2]]
-        ).transpose()
+        )
         self.assertTrue(env._can_move(gym_2048_env.UP))
         self.assertTrue(env._can_move(gym_2048_env.DOWN))
         self.assertTrue(env._can_move(gym_2048_env.LEFT))
@@ -348,7 +337,7 @@ class TestGym2048Env(unittest.TestCase):
         env.reset()
         env._grid = np.asarray(
             [[2, 2, 2, 2], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        ).transpose()
+        )
         print("interesting.......")
         self.assertFalse(env._can_move(gym_2048_env.UP))
 
@@ -358,7 +347,7 @@ class TestGym2048Env(unittest.TestCase):
         env.reset()
         env._grid = np.asarray(
             [[2, 0, 0, 0], [2, 0, 0, 0], [2, 0, 0, 0], [2, 0, 0, 0]]
-        ).transpose()
+        )
         self.assertFalse(env._can_move(gym_2048_env.LEFT))
 
     def test_cant_move_d(self):
@@ -367,7 +356,7 @@ class TestGym2048Env(unittest.TestCase):
         env.reset()
         env._grid = np.asarray(
             [[0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [2, 2, 2, 2]]
-        ).transpose()
+        )
         self.assertFalse(env._can_move(gym_2048_env.DOWN))
 
     def test_negative_reward(self):
@@ -376,7 +365,7 @@ class TestGym2048Env(unittest.TestCase):
         env.reset()
         env._grid = np.asarray(
             [[0, 0, 0, 2], [0, 0, 0, 8], [0, 0, 2, 4], [0, 0, 0, 4]]
-        ).transpose()
+        )
         initial_state = copy.deepcopy(env._grid)
         self._save(env, "test_negative_reward_0")
         _observation, reward, done, _truncated, _info = env.step(gym_2048_env.RIGHT)
@@ -392,13 +381,13 @@ class TestGym2048Env(unittest.TestCase):
         env.reset()
         env._grid = np.asarray(
             [[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        ).transpose()
+        )
         self.assertEqual(env._score, 0)
         env.step(gym_2048_env.LEFT)
         self.assertEqual(env._score, 4)
         env._grid = np.asarray(
             [[4, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        ).transpose()
+        )
         env.step(gym_2048_env.LEFT)
         self.assertEqual(env._score, 12)
 
@@ -408,13 +397,13 @@ class TestGym2048Env(unittest.TestCase):
         env.reset()
         env._grid = np.asarray(
             [[2, 2, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        ).transpose()
+        )
         observation, _, _, _, _ = env.step(gym_2048_env.LEFT)
         self.assertEqual(observation["total_score"][0], 4)
 
         env._grid = np.asarray(
             [[4, 4, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        ).transpose()
+        )
         observation, _, _, _, _ = env.step(gym_2048_env.LEFT)
         self.assertEqual(observation["total_score"][0], 12)
 
@@ -431,7 +420,7 @@ class TestGym2048Env(unittest.TestCase):
         env.reset(options={"nospawn": True})
         env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
         env._grid[0, 0] = 1024
-        env._grid[1, 0] = 1024
+        env._grid[0, 1] = 1024
         _observation, reward, terminated, _truncated, _info = env.step(gym_2048_env.LEFT)
         self.assertEqual(reward, 2048)
         self.assertTrue(terminated)
@@ -444,7 +433,7 @@ class TestGym2048Env(unittest.TestCase):
         # Ensure we have a known state
         env._grid = np.asarray(
             [[2, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        ).transpose()
+        )
         
         # Valid move (RIGHT)
         env.step(gym_2048_env.RIGHT)
@@ -457,7 +446,7 @@ class TestGym2048Env(unittest.TestCase):
         # Force grid state to make RIGHT invalid
         env._grid = np.asarray(
             [[0, 0, 0, 2], [0, 0, 0, 0], [0, 0, 0, 0], [0, 0, 0, 0]]
-        ).transpose()
+        )
 
         # Invalid move (RIGHT again)
         env.step(gym_2048_env.RIGHT)

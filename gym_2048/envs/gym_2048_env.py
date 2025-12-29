@@ -108,7 +108,7 @@ def _get_valid_moves_jit(grid: npt.NDArray[np.int32]) -> npt.NDArray[np.int32]:
     # UP (0)
     can_up = False
     for i in range(4):
-        col = grid[i]  # View of column i
+        col = grid[:, i]  # View of column i
         col_flipped = col[::-1]
         if _can_pack_or_slide_jit(col_flipped):
             can_up = True
@@ -118,7 +118,7 @@ def _get_valid_moves_jit(grid: npt.NDArray[np.int32]) -> npt.NDArray[np.int32]:
     # DOWN (1)
     can_down = False
     for i in range(4):
-        col = grid[i]
+        col = grid[:, i]
         if _can_pack_or_slide_jit(col):
             can_down = True
             break
@@ -127,7 +127,7 @@ def _get_valid_moves_jit(grid: npt.NDArray[np.int32]) -> npt.NDArray[np.int32]:
     # LEFT (2)
     can_left = False
     for i in range(4):
-        row = grid[:, i]
+        row = grid[i]
         row_flipped = row[::-1]
         if _can_pack_or_slide_jit(row_flipped):
             can_left = True
@@ -137,7 +137,7 @@ def _get_valid_moves_jit(grid: npt.NDArray[np.int32]) -> npt.NDArray[np.int32]:
     # RIGHT (3)
     can_right = False
     for i in range(4):
-        row = grid[:, i]
+        row = grid[i]
         if _can_pack_or_slide_jit(row):
             can_right = True
             break
@@ -151,30 +151,30 @@ def _merge_jit(grid: npt.NDArray[np.int32], action: int) -> int:
     reward = 0
     if action == 0:  # UP
         for i in range(4):
-            col = grid[i]
+            col = grid[:, i]
             packed, r = _pack_jit(col)
             reward += r
-            grid[i] = packed
+            grid[:, i] = packed
     elif action == 1:  # DOWN
         for i in range(4):
-            col = grid[i]
+            col = grid[:, i]
             col_flipped = col[::-1]
             packed, r = _pack_jit(col_flipped)
             reward += r
-            grid[i] = packed[::-1]
+            grid[:, i] = packed[::-1]
     elif action == 2:  # LEFT
         for i in range(4):
-            row = grid[:, i]
+            row = grid[i]
             packed, r = _pack_jit(row)
             reward += r
-            grid[:, i] = packed
+            grid[i] = packed
     elif action == 3:  # RIGHT
         for i in range(4):
-            row = grid[:, i]
+            row = grid[i]
             row_flipped = row[::-1]
             packed, r = _pack_jit(row_flipped)
             reward += r
-            grid[:, i] = packed[::-1]
+            grid[i] = packed[::-1]
     return reward
 
 
@@ -219,8 +219,8 @@ class Gym2048Env(gym.Env):
 
         # Pre-calculate slices for rendering
         self._grid_slices = []
-        for x in range(GRID_SIZE[0]):
-            for y in range(GRID_SIZE[1]):
+        for y in range(GRID_SIZE[1]):
+            for x in range(GRID_SIZE[0]):
                 rx = int(x * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2)
                 ry = int(y * (SQUARE_PX + PADDING_PX) + PADDING_PX / 2 + HEADER_PX)
                 self._grid_slices.append(
