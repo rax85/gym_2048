@@ -2,6 +2,7 @@
 
 # pylint: disable=too-many-instance-attributes, duplicate-code
 import random
+import copy
 
 from typing import Any, Tuple, Dict, Optional, List
 
@@ -265,13 +266,37 @@ class Gym2048Env(gym.Env):
 
         observation, terminated = self._create_observation()
         truncated = False
-        return observation, float(reward), terminated, truncated, {}
+        return observation, float(reward), terminated, truncated, {"state": self._get_state()}
+
+    def _get_state(self) -> Dict[str, Any]:
+        """Return the current internal state of the environment."""
+        return {
+            "grid": self._grid.copy(),
+            "score": self._score,
+            "total_moves": self._total_moves,
+            "valid_moves": self._valid_moves,
+            "invalid_moves": self._invalid_moves,
+            "move_history": copy.deepcopy(self._move_history),
+        }
 
     def reset(
         self, *, seed: Optional[int] = None, options: Optional[Dict[str, Any]] = None
     ) -> Tuple[Dict[str, Any], Dict[str, Any]]:
         """Reset the environment to the initial state."""
         super().reset(seed=seed)
+
+        if options is not None and "state" in options:
+            state = options["state"]
+            self._grid = state["grid"].copy()
+            self._score = state["score"]
+            self._total_moves = state["total_moves"]
+            self._valid_moves = state["valid_moves"]
+            self._invalid_moves = state["invalid_moves"]
+            self._move_history = copy.deepcopy(state["move_history"])
+
+            observation, _ = self._create_observation()
+            return observation, {}
+
         self._grid = np.zeros(GRID_SIZE, dtype=np.int32)
         self._score = 0
         self._total_moves = 0

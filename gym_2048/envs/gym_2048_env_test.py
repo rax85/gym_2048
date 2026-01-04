@@ -436,12 +436,18 @@ class TestGym2048Env(unittest.TestCase):
         )
         
         # Valid move (RIGHT)
-        env.step(gym_2048_env.RIGHT)
+        _, _, _, _, info = env.step(gym_2048_env.RIGHT)
         self.assertEqual(env._total_moves, 1)
         self.assertEqual(env._valid_moves, 1)
         self.assertEqual(env._invalid_moves, 0)
         self.assertEqual(len(env._move_history), 1)
         self.assertEqual(env._move_history[0], (gym_2048_env.RIGHT, True))
+        
+        # Check state in info
+        state = info["state"]
+        self.assertEqual(state["total_moves"], 1)
+        self.assertEqual(state["valid_moves"], 1)
+        self.assertEqual(state["move_history"][0], (gym_2048_env.RIGHT, True))
 
         # Force grid state to make RIGHT invalid
         env._grid = np.asarray(
@@ -461,6 +467,86 @@ class TestGym2048Env(unittest.TestCase):
             env.step(gym_2048_env.UP)
         
         self.assertEqual(len(env._move_history), 8)
+
+    def test_step_returns_state(self):
+        """Test that step returns the state in info."""
+        env = Gym2048Env()
+        env.reset()
+        _, _, _, _, info = env.step(gym_2048_env.UP)
+        self.assertIn("state", info)
+        state = info["state"]
+        self.assertIn("grid", state)
+        self.assertIn("score", state)
+        self.assertIn("total_moves", state)
+        self.assertIn("valid_moves", state)
+        self.assertIn("invalid_moves", state)
+        self.assertIn("move_history", state)
+
+    def test_restore_state(self):
+        """Test that the environment can be restored from a saved state."""
+        env = Gym2048Env()
+        env.reset()
+        
+        # Make some moves
+        env.step(gym_2048_env.UP)
+        env.step(gym_2048_env.LEFT)
+        _, _, _, _, info = env.step(gym_2048_env.RIGHT)
+        
+        saved_state = info["state"]
+        current_grid = env._grid.copy()
+        current_score = env._score
+        
+        # Create a new environment and restore state
+        new_env = Gym2048Env()
+        new_env.reset(options={"state": saved_state})
+        
+        self.assertTrue(np.array_equal(new_env._grid, current_grid))
+        self.assertEqual(new_env._score, current_score)
+        self.assertEqual(new_env._total_moves, env._total_moves)
+        self.assertEqual(new_env._valid_moves, env._valid_moves)
+        self.assertEqual(new_env._invalid_moves, env._invalid_moves)
+        self.assertEqual(new_env._move_history, env._move_history)
+
+    def test_continue_from_restored_state(self):
+        """Test that the game can be continued from a restored state."""
+        env = Gym2048Env()
+        env.reset(options={"nospawn": True})
+        
+        # Setup a specific state
+        # 2 0 0 0
+        # 0 0 0 0
+        # 0 0 0 0
+        # 0 0 0 0
+        env._grid = np.zeros(gym_2048_env.GRID_SIZE, dtype=np.int32)
+        env._grid[0, 0] = 2
+        
+        state = env._get_state()
+        
+        # Restore in new env
+        new_env = Gym2048Env()
+        new_env.reset(options={"state": state})
+        
+        # Move RIGHT
+        # 0 0 0 2
+        # ...
+        new_env.step(gym_2048_env.RIGHT)
+        
+        self.assertEqual(new_env._grid[0, 3], 2)
+        # Check that we have exactly 2 tiles now (one moved, one spawned)
+        self.assertEqual(np.count_nonzero(new_env._grid), 2)
+
+    def test_state_independence(self):
+        """Test that modifying the returned state doesn't affect the environment."""
+        env = Gym2048Env()
+        env.reset()
+        _, _, _, _, info = env.step(gym_2048_env.UP)
+        
+        state = info["state"]
+        state["score"] = 99999
+        state["grid"][0, 0] = 1234
+        
+        self.assertNotEqual(env._score, 99999)
+        self.assertNotEqual(env._grid[0, 0], 1234)
 
 
 if __name__ == "__main__":
