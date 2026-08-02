@@ -391,20 +391,19 @@ class GymDroneEnv(gym.Env):
         }
 
     def render(self) -> np.ndarray:
-        """Produce 3D wireframe render and 2D overview map onto canvas."""
+        """Produce 3D flat shaded render and 2D overview map onto canvas."""
         image = Image.fromarray(self._background.copy())
         draw = ImageDraw.Draw(image)
 
-        # Header Text info
-        draw.text((10, 8), "FIXED WING AUTOPILOT SIMULATOR", fill=COLOR_TEXT, font=self._title_font)
-
-        # 3D Viewport Drawing (Clip limits: y in [HEADER_PX, HEIGHT-FOOTER_PX])
+        # 3D Viewport Drawing
         self._render_3d_viewport(draw)
 
-        # 2D Map Overlap Drawing (Top Right)
-        self._render_2d_map(draw)
+        # Redraw Header on top of 3D rendering to mask overflow
+        draw.rectangle([0, 0, WIDTH, HEADER_PX], fill=COLOR_HEADER)
+        draw.text((10, 8), "FIXED WING AUTOPILOT SIMULATOR", fill=COLOR_TEXT, font=self._title_font)
 
-        # Bottom stats
+        # Redraw Footer on top of 3D rendering to mask overflow
+        draw.rectangle([0, HEIGHT - FOOTER_PX, WIDTH, HEIGHT], fill=COLOR_HEADER)
         airspeed = np.linalg.norm(self._vel)
         agl = self._pos[1] - self._get_terrain_height(self._pos[0], self._pos[2])
         draw.text(
@@ -414,10 +413,13 @@ class GymDroneEnv(gym.Env):
             font=self._stats_font,
         )
 
+        # 2D Map Overlap Drawing (Top Right)
+        self._render_2d_map(draw)
+
         return np.array(image, dtype=np.uint8)
 
     def _render_3d_viewport(self, draw: ImageDraw.Draw) -> None:
-        """Render a 3D wireframe representation of the landscape, runway, and drone."""
+        """Render a 3D flat shaded representation of the landscape, runway, and drone."""
         # Define Chase Camera Position (Behind the drone)
         hx = math.cos(self._pitch) * math.sin(self._yaw)
         hy = math.sin(self._pitch)
@@ -441,78 +443,201 @@ class GymDroneEnv(gym.Env):
         focal = 220.0
         cx, cy = WIDTH // 2, (HEIGHT - HEADER_PX - FOOTER_PX) // 2 + HEADER_PX
 
-        def project(pt_world: npt.NDArray[np.float64]) -> Optional[Tuple[float, float]]:
-            """Project 3D world coordinate to 2D screen coordinate."""
+        def to_cam_space(pt_world: npt.NDArray[np.float64]) -> npt.NDArray[np.float64]:
             rel = pt_world - cam_pos
-            z_cam = np.dot(rel, fwd_cam)
-            if z_cam < 0.5:
-                return None
-            x_cam = np.dot(rel, right_cam)
-            y_cam = np.dot(rel, up_cam)
+            return np.array([
+                np.dot(rel, right_cam),
+                np.dot(rel, up_cam),
+                np.dot(rel, fwd_cam)
+            ])
 
+        def clip_polygon_z(pts_cam: List[npt.NDArray[np.float64]], min_z: float = 0.5) -> List[npt.NDArray[np.float64]]:
+            clipped = []
+            if not pts_cam:
+                return clipped
+            for i in range(len(pts_cam)):
+                p1 = pts_cam[i]
+                p2 = pts_cam[(i + 1) % len(pts_cam)]
+                
+                p1_in = p1[2] >= min_z
+                p2_in = p2[2] >= min_z
+                
+                if p1_in:
+                    if p2_in:
+                        clipped.append(p2)
+                    else:
+                        t = (min_z - p1[2]) / (p2[2] - p1[2])
+                        intersect = p1 + t * (p2 - p1)
+                        clipped.append(intersect)
+                else:
+                    if p2_in:
+                        t = (min_z - p1[2]) / (p2[2] - p1[2])
+                        intersect = p1 + t * (p2 - p1)
+                        clipped.append(intersect)
+                        clipped.append(p2)
+            return clipped
+
+        def project_cam(pt_cam: npt.NDArray[np.float64]) -> Tuple[float, float]:
+            x_cam, y_cam, z_cam = pt_cam
             sx = cx + (x_cam / z_cam) * focal
-            sy = cy - (y_cam / z_cam) * focal  # invert y for screen coordinates
+            sy = cy - (y_cam / z_cam) * focal
             return sx, sy
 
-        # Clip line boundary inside the viewport area
-        def draw_viewport_line(p1, p2, fill_color, width=1):
-            if p1 is None or p2 is None:
-                return
-            # Crop to viewport Y boundary
-            y1 = max(HEADER_PX, min(HEIGHT - FOOTER_PX, p1[1]))
-            y2 = max(HEADER_PX, min(HEIGHT - FOOTER_PX, p2[1]))
-            if HEADER_PX <= p1[1] <= HEIGHT - FOOTER_PX or HEADER_PX <= p2[1] <= HEIGHT - FOOTER_PX:
-                draw.line([p1[0], y1, p2[0], y2], fill=fill_color, width=width)
+        # Generate a list of elements to render
+        render_list = []
 
-        # 1. Draw Terrain Wireframe
-        # Render a 12x12 grid around the drone position
-        grid_res = 12
+        # 1. Generate Terrain Grid
+        grid_res = 16
         grid_spacing = 50.0
         center_x = round(self._pos[0] / grid_spacing) * grid_spacing
         center_z = round(self._pos[2] / grid_spacing) * grid_spacing
 
-        projected_grid = {}
-        for i in range(-6, 7):
-            for j in range(-6, 7):
-                gx = center_x + i * grid_spacing
-                gz = center_z + j * grid_spacing
-                if 0.0 <= gx <= MAP_SIZE and 0.0 <= gz <= MAP_SIZE:
-                    gy = self._get_terrain_height(gx, gz)
-                    pt_scr = project(np.array([gx, gy, gz]))
-                    projected_grid[(i, j)] = pt_scr
+        world_grid = {}
+        camera_grid = {}
+        for u in range(-8, 9):
+            for v in range(-8, 9):
+                gx = max(0.0, min(MAP_SIZE, center_x + u * grid_spacing))
+                gz = max(0.0, min(MAP_SIZE, center_z + v * grid_spacing))
+                gy = self._get_terrain_height(gx, gz)
+                w_pt = np.array([gx, gy, gz])
+                world_grid[(u, v)] = w_pt
+                camera_grid[(u, v)] = to_cam_space(w_pt)
 
-        # Draw grid lines
-        for i in range(-6, 7):
-            for j in range(-6, 7):
-                p_curr = projected_grid.get((i, j))
-                p_right = projected_grid.get((i + 1, j))
-                p_down = projected_grid.get((i, j + 1))
-                if p_curr:
-                    draw_viewport_line(p_curr, p_right, COLOR_GROUND)
-                    draw_viewport_line(p_curr, p_down, COLOR_GROUND)
+        # Build terrain triangles
+        for u in range(-8, 8):
+            for v in range(-8, 8):
+                w00 = world_grid[(u, v)]
+                w10 = world_grid[(u + 1, v)]
+                w11 = world_grid[(u + 1, v + 1)]
+                w01 = world_grid[(u, v + 1)]
 
-        # 2. Draw Target Runway 2
-        rx, rz = RUNWAY_2["x"], RUNWAY_2["z"]
-        r_head = RUNWAY_2["heading"]
-        r_len = RUNWAY_2["length"]
-        r_wid = RUNWAY_2["width"]
+                c00 = camera_grid[(u, v)]
+                c10 = camera_grid[(u + 1, v)]
+                c11 = camera_grid[(u + 1, v + 1)]
+                c01 = camera_grid[(u, v + 1)]
 
-        # Runway corners
-        r_fwd = np.array([math.sin(r_head), 0.0, math.cos(r_head)])
-        r_right = np.cross(np.array([0.0, 1.0, 0.0]), r_fwd)
+                # Triangle 1
+                avg_z1 = (c00[2] + c10[2] + c01[2]) / 3.0
+                if avg_z1 >= 0.5:
+                    render_list.append({
+                        'type': 'terrain',
+                        'w0': w00, 'w1': w10, 'w2': w01,
+                        'c0': c00, 'c1': c10, 'c2': c01,
+                        'avg_z': avg_z1
+                    })
 
-        c1 = np.array([rx, self._get_terrain_height(rx, rz), rz]) + r_fwd * (r_len / 2) - r_right * (r_wid / 2)
-        c2 = np.array([rx, self._get_terrain_height(rx, rz), rz]) + r_fwd * (r_len / 2) + r_right * (r_wid / 2)
-        c3 = np.array([rx, self._get_terrain_height(rx, rz), rz]) - r_fwd * (r_len / 2) + r_right * (r_wid / 2)
-        c4 = np.array([rx, self._get_terrain_height(rx, rz), rz]) - r_fwd * (r_len / 2) - r_right * (r_wid / 2)
+                # Triangle 2
+                avg_z2 = (c10[2] + c11[2] + c01[2]) / 3.0
+                if avg_z2 >= 0.5:
+                    render_list.append({
+                        'type': 'terrain',
+                        'w0': w10, 'w1': w11, 'w2': w01,
+                        'c0': c10, 'c1': c11, 'c2': c01,
+                        'avg_z': avg_z2
+                    })
 
-        s1, s2, s3, s4 = project(c1), project(c2), project(c3), project(c4)
-        draw_viewport_line(s1, s2, COLOR_RUNWAY, width=2)
-        draw_viewport_line(s2, s3, COLOR_RUNWAY, width=2)
-        draw_viewport_line(s3, s4, COLOR_RUNWAY, width=2)
-        draw_viewport_line(s4, s1, COLOR_RUNWAY, width=2)
+        # 2. Generate Runways
+        for rwy in (RUNWAY_1, RUNWAY_2):
+            rx, rz = rwy["x"], rwy["z"]
+            r_head = rwy["heading"]
+            r_len = rwy["length"]
+            r_wid = rwy["width"]
 
-        # 3. Draw a HUD Flight Ladder
+            r_fwd = np.array([math.sin(r_head), 0.0, math.cos(r_head)])
+            r_right = np.cross(np.array([0.0, 1.0, 0.0]), r_fwd)
+
+            y = self._get_terrain_height(rx, rz) + 0.1  # slightly above terrain to prevent z-fighting
+
+            w1 = np.array([rx, y, rz]) + r_fwd * (r_len / 2) - r_right * (r_wid / 2)
+            w2 = np.array([rx, y, rz]) + r_fwd * (r_len / 2) + r_right * (r_wid / 2)
+            w3 = np.array([rx, y, rz]) - r_fwd * (r_len / 2) + r_right * (r_wid / 2)
+            w4 = np.array([rx, y, rz]) - r_fwd * (r_len / 2) - r_right * (r_wid / 2)
+
+            c1 = to_cam_space(w1)
+            c2 = to_cam_space(w2)
+            c3 = to_cam_space(w3)
+            c4 = to_cam_space(w4)
+
+            # Tri 1: w1, w2, w4
+            avg_z1 = (c1[2] + c2[2] + c4[2]) / 3.0
+            if avg_z1 >= 0.5:
+                render_list.append({
+                    'type': 'runway',
+                    'w0': w1, 'w1': w2, 'w2': w4,
+                    'c0': c1, 'c1': c2, 'c2': c4,
+                    'avg_z': avg_z1,
+                    'fill_color': (50, 55, 65),
+                    'outline_color': COLOR_RUNWAY
+                })
+
+            # Tri 2: w2, w3, w4
+            avg_z2 = (c2[2] + c3[2] + c4[2]) / 3.0
+            if avg_z2 >= 0.5:
+                render_list.append({
+                    'type': 'runway',
+                    'w0': w2, 'w1': w3, 'w2': w4,
+                    'c0': c2, 'c1': c3, 'c2': c4,
+                    'avg_z': avg_z2,
+                    'fill_color': (50, 55, 65),
+                    'outline_color': COLOR_RUNWAY
+                })
+
+        # Sort all elements back-to-front (descending depth)
+        render_list.sort(key=lambda item: item['avg_z'], reverse=True)
+
+        # Light source for flat shading
+        light_dir = np.array([0.3, 0.9, 0.3])
+        light_dir /= np.linalg.norm(light_dir)
+
+        # Render sorted elements
+        for item in render_list:
+            c0, c1, c2 = item['c0'], item['c1'], item['c2']
+            clipped_cam = clip_polygon_z([c0, c1, c2])
+            if len(clipped_cam) < 3:
+                continue
+
+            pts_scr = [project_cam(p) for p in clipped_cam]
+            pts_scr = [(int(x), int(y)) for x, y in pts_scr]
+
+            if item['type'] == 'terrain':
+                w0, w1, w2 = item['w0'], item['w1'], item['w2']
+                # Calculate face normal in world space
+                v1 = w1 - w0
+                v2 = w2 - w0
+                normal = np.cross(v1, v2)
+                norm = np.linalg.norm(normal)
+                if norm > 0:
+                    normal /= norm
+                else:
+                    normal = np.array([0.0, 1.0, 0.0])
+                if normal[1] < 0:
+                    normal = -normal
+
+                # Simple diffuse lighting
+                dot = np.dot(normal, light_dir)
+                dot = max(0.1, min(1.0, dot))
+
+                # Altitude-based color gradient
+                avg_y = (w0[1] + w1[1] + w2[1]) / 3.0
+                height_factor = max(0.0, min(1.0, avg_y / 80.0))
+
+                r_base = 15 + 30 * height_factor
+                g_base = 80 + 80 * height_factor
+                b_base = 80 + 50 * height_factor
+
+                lit_r = int(r_base * (0.3 + 0.7 * dot))
+                lit_g = int(g_base * (0.3 + 0.7 * dot))
+                lit_b = int(b_base * (0.3 + 0.7 * dot))
+                color = (lit_r, lit_g, lit_b)
+
+                draw.polygon(pts_scr, fill=color, outline=color)
+
+            elif item['type'] == 'runway':
+                fill_color = item['fill_color']
+                outline_color = item['outline_color']
+                draw.polygon(pts_scr, fill=fill_color, outline=outline_color)
+
+        # 3. Draw a HUD Flight Ladder (Drawn on top of 3D rendering)
         # Center indicator
         draw.line([cx - 8, cy, cx - 2, cy], fill=COLOR_HUD)
         draw.line([cx + 2, cy, cx + 8, cy], fill=COLOR_HUD)
