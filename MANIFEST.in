@@ -3,3 +3,4 @@ include LICENSE
 include requirements.txt
 include *.png
 recursive-include envpack *.png
+recursive-include screenshots *.gif

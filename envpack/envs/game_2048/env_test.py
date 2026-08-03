@@ -8,6 +8,8 @@ import numpy as np
 
 from PIL import Image
 
+from gymnasium.utils.env_checker import check_env
+
 from envpack.envs.game_2048 import env as gym_2048_env
 from envpack.envs.game_2048.env import Gym2048Env
 
@@ -15,6 +17,11 @@ from envpack.envs.game_2048.env import Gym2048Env
 class TestGym2048Env(unittest.TestCase):
     # pylint: disable=too-many-public-methods
     """Tests for the Gym2048Env environment."""
+
+    def test_gymnasium_compliance(self):
+        """Test Gymnasium environment API compliance."""
+        env = Gym2048Env()
+        check_env(env.unwrapped)
 
     def test_initial_state(self):
         """Test that the initial state has two non-zero tiles."""
@@ -55,11 +62,9 @@ class TestGym2048Env(unittest.TestCase):
         self.assertEqual(reward, 4)
 
     def _save(self, env, name):
-        """Helper to save a screenshot of the environment."""
+        """Helper to render the environment."""
         env._render()
-        rgb_data = env.render()
-        image = Image.fromarray(rgb_data)
-        image.save(f"/tmp/test_{name}.png")
+        env.render()
 
     def test_render(self):
         """Test rendering the environment."""

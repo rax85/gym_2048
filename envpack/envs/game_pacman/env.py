@@ -316,10 +316,21 @@ class GymPacmanEnv(gym.Env):
             g["pos"] = next_pos
             g["dir"] = next_dir
 
-        # 4. Check for Collisions
         terminated = False
-        
-        # Helper to process collisions
+
+        # 4. Check dot/power pellet consumption
+        if self.pacman_pos in self.dots:
+            self.dots.remove(self.pacman_pos)
+            self.score += 10
+            reward += 10.0
+
+        elif self.pacman_pos in self.power_pellets:
+            self.power_pellets.remove(self.pacman_pos)
+            self.score += 50
+            reward += 50.0
+            self.frightened_timer = 40
+
+        # 5. Check for Collisions
         def handle_collisions():
             nonlocal reward, terminated
             for g in self.ghosts:
@@ -347,20 +358,8 @@ class GymPacmanEnv(gym.Env):
                         return True
             return False
 
-        # Collision check after positions update
+        # Collision check after positions and pellet state update
         handle_collisions()
-
-        # 5. Check dot/power pellet consumption
-        if self.pacman_pos in self.dots:
-            self.dots.remove(self.pacman_pos)
-            self.score += 10
-            reward += 10.0
-
-        elif self.pacman_pos in self.power_pellets:
-            self.power_pellets.remove(self.pacman_pos)
-            self.score += 50
-            reward += 50.0
-            self.frightened_timer = 40
 
         # Check win / level reset
         if not self.dots and not self.power_pellets:

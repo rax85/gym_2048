@@ -272,7 +272,7 @@ class GymCheckersEnv(gym.Env):
         return {
             "observation": self._grid.copy(),
             "valid_mask": valid_mask,
-            "current_player": self._current_player,
+            "current_player": np.int64(self._current_player),
         }
 
     def step(

@@ -94,7 +94,7 @@ class GymDroneEnv(gym.Env):
                     low=-np.inf, high=np.inf, shape=(12,), dtype=np.float32
                 ),
                 "valid_mask": spaces.Box(
-                    low=1, high=1, shape=(4,), dtype=np.int8
+                    low=0, high=1, shape=(4,), dtype=np.int8
                 ),
             }
         )

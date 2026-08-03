@@ -269,7 +269,8 @@ class Gym2048Env(gym.Env):
         if len(self._move_history) > 8:
             self._move_history.pop(0)
 
-        observation, terminated = self._create_observation()
+        new_valid_moves = _get_valid_moves_jit(self._grid)
+        observation, terminated = self._create_observation(new_valid_moves)
         truncated = False
         return observation, float(reward), terminated, truncated, {"state": self._get_state()}
 

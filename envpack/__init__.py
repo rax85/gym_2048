@@ -1,5 +1,7 @@
 """Envpack: A collection of game environments for Gymnasium."""
 
+__version__ = "0.0.1"
+
 from gymnasium.envs.registration import register
 
 register(

@@ -274,7 +274,7 @@ class GymTetrisEnv(gym.Env):
                 terminated = True
                 reward = -1.0
         else:
-            # Gravity: piece automatically slides down 1 block every step (even after left/right/rotate action)
+            # Gravity: piece automatically slides down 1 block every step (even after left/right/rotate/down action)
             pos_gravity = (self._current_pos[0] + 1, self._current_pos[1])
             if self._check_collision(self._board, self._current_shape, pos_gravity):
                 # Lock in place

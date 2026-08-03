@@ -1,5 +1,4 @@
 gymnasium>=1.2.3
-setuptools>=80.9.0
 Pillow>=11.3.0
 absl-py>=2.3.1
 matplotlib>=3.10.8

@@ -204,7 +204,7 @@ class GymBattleshipEnv(gym.Env):
         return {
             "observation": obs_grid,
             "valid_mask": valid_mask,
-            "current_player": self._current_player,
+            "current_player": np.int64(self._current_player),
             "ships_left": np.array([p1_rem, p2_rem], dtype=np.int32),
         }
 

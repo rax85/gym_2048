@@ -93,12 +93,12 @@ class GymGravityDuelEnv(gym.Env):
             fill=(10, 15, 28),
         )
 
-        # Draw random static stars
-        np.random.seed(0)
+        # Draw random static stars using an isolated RNG instance
+        rng = np.random.RandomState(0)
         for _ in range(50):
-            sx = np.random.randint(0, PLAY_WIDTH * self.SF)
-            sy = np.random.randint(HEADER_PX * self.SF, (PLAY_HEIGHT + HEADER_PX) * self.SF)
-            brightness = np.random.randint(100, 255)
+            sx = rng.randint(0, PLAY_WIDTH * self.SF)
+            sy = rng.randint(HEADER_PX * self.SF, (PLAY_HEIGHT + HEADER_PX) * self.SF)
+            brightness = rng.randint(100, 255)
             draw.point((sx, sy), fill=(brightness, brightness, brightness))
 
         self.reset()
