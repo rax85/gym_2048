@@ -59,10 +59,12 @@ class GymBattleshipEnv(gym.Env):
         self.action_space = spaces.MultiDiscrete([8, 8])
 
         # Observation space (perspective-based for current player)
+        # Channel 0: Own board state (0=empty, 1=intact ship, 2=damaged ship, 3=opponent miss)
+        # Channel 1: Tracking board state (0=unshot, 1=hit opponent ship, 2=miss opponent water)
         self.observation_space = spaces.Dict(
             {
                 "observation": spaces.Box(
-                    low=0, high=5, shape=(8, 8), dtype=np.int32
+                    low=0, high=5, shape=(2, 8, 8), dtype=np.int32
                 ),
                 "valid_mask": spaces.Box(
                     low=0, high=1, shape=(8, 8), dtype=np.int8
@@ -153,14 +155,9 @@ class GymBattleshipEnv(gym.Env):
         valid_mask = np.where(active_shots == 0, 1, 0).astype(np.int8)
 
         # Observation grid representing current player's perspective:
-        # Cell values:
-        # 0: Empty / Unknown (opponent's side, or empty on own side)
-        # 1: Own Ship (undamaged)
-        # 2: Own Ship Hit (damaged by opponent)
-        # 3: Own Empty Hit (miss by opponent)
-        # 4: Opponent Ship Hit (hit by current player)
-        # 5: Opponent Empty Hit (miss by current player)
-        obs_grid = np.zeros((8, 8), dtype=np.int32)
+        # Channel 0: Own board state (0=empty, 1=intact ship, 2=damaged ship, 3=opponent miss)
+        # Channel 1: Tracking board state (0=unshot, 1=hit opponent ship, 2=miss opponent water)
+        obs_grid = np.zeros((2, 8, 8), dtype=np.int32)
 
         if self._current_player == 1:
             # Own board (Player 1)
@@ -169,18 +166,18 @@ class GymBattleshipEnv(gym.Env):
                     is_ship = self._p1_board[r, c] == 1
                     shot_type = self._p2_shots[r, c] # opponent's shots
                     if is_ship:
-                        obs_grid[r, c] = 2 if shot_type == 1 else 1
+                        obs_grid[0, r, c] = 2 if shot_type == 1 else 1
                     else:
-                        obs_grid[r, c] = 3 if shot_type == 2 else 0
+                        obs_grid[0, r, c] = 3 if shot_type == 2 else 0
 
-            # Opponent board (Player 2) -> overlay onto cells that have been shot by Player 1
+            # Opponent board tracking (Player 2)
             for r in range(8):
                 for c in range(8):
                     my_shot = self._p1_shots[r, c]
                     if my_shot == 1:   # Hit
-                        obs_grid[r, c] = 4
+                        obs_grid[1, r, c] = 1
                     elif my_shot == 2: # Miss
-                        obs_grid[r, c] = 5
+                        obs_grid[1, r, c] = 2
         else:
             # Own board (Player 2)
             for r in range(8):
@@ -188,18 +185,18 @@ class GymBattleshipEnv(gym.Env):
                     is_ship = self._p2_board[r, c] == 1
                     shot_type = self._p1_shots[r, c] # opponent's shots
                     if is_ship:
-                        obs_grid[r, c] = 2 if shot_type == 1 else 1
+                        obs_grid[0, r, c] = 2 if shot_type == 1 else 1
                     else:
-                        obs_grid[r, c] = 3 if shot_type == 2 else 0
+                        obs_grid[0, r, c] = 3 if shot_type == 2 else 0
 
-            # Opponent board (Player 1) -> overlay onto cells that have been shot by Player 2
+            # Opponent board tracking (Player 1)
             for r in range(8):
                 for c in range(8):
                     my_shot = self._p2_shots[r, c]
                     if my_shot == 1:   # Hit
-                        obs_grid[r, c] = 4
+                        obs_grid[1, r, c] = 1
                     elif my_shot == 2: # Miss
-                        obs_grid[r, c] = 5
+                        obs_grid[1, r, c] = 2
 
         return {
             "observation": obs_grid,

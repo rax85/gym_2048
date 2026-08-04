@@ -254,25 +254,30 @@ class GymTankCombatEnv(gym.Env):
             self._p2_angle += ROTATION_SPEED
         self._p2_angle = self._p2_angle % (2 * math.pi)
 
-        # Move Forward with sliding
+        # Store initial positions for symmetric collision checks
+        p1_init = self._p1_pos.copy()
+        p2_init = self._p2_pos.copy()
+
+        # Move Forward with sliding for P1
         if p1_act == 3:
             dx = math.cos(self._p1_angle) * MOVE_SPEED
             dy = math.sin(self._p1_angle) * MOVE_SPEED
-            new_x = self._p1_pos[0] + dx
-            if not self._check_wall_collision(new_x, self._p1_pos[1], TANK_RADIUS) and math.hypot(new_x - self._p2_pos[0], self._p1_pos[1] - self._p2_pos[1]) >= 2 * TANK_RADIUS:
+            new_x = p1_init[0] + dx
+            if not self._check_wall_collision(new_x, p1_init[1], TANK_RADIUS) and math.hypot(new_x - p2_init[0], p1_init[1] - p2_init[1]) >= 2 * TANK_RADIUS:
                 self._p1_pos[0] = new_x
-            new_y = self._p1_pos[1] + dy
-            if not self._check_wall_collision(self._p1_pos[0], new_y, TANK_RADIUS) and math.hypot(self._p1_pos[0] - self._p2_pos[0], new_y - self._p2_pos[1]) >= 2 * TANK_RADIUS:
+            new_y = p1_init[1] + dy
+            if not self._check_wall_collision(self._p1_pos[0], new_y, TANK_RADIUS) and math.hypot(self._p1_pos[0] - p2_init[0], new_y - p2_init[1]) >= 2 * TANK_RADIUS:
                 self._p1_pos[1] = new_y
 
+        # Move Forward with sliding for P2
         if p2_act == 3:
             dx = math.cos(self._p2_angle) * MOVE_SPEED
             dy = math.sin(self._p2_angle) * MOVE_SPEED
-            new_x = self._p2_pos[0] + dx
-            if not self._check_wall_collision(new_x, self._p2_pos[1], TANK_RADIUS) and math.hypot(new_x - self._p1_pos[0], self._p2_pos[1] - self._p1_pos[1]) >= 2 * TANK_RADIUS:
+            new_x = p2_init[0] + dx
+            if not self._check_wall_collision(new_x, p2_init[1], TANK_RADIUS) and math.hypot(new_x - p1_init[0], p2_init[1] - p1_init[1]) >= 2 * TANK_RADIUS:
                 self._p2_pos[0] = new_x
-            new_y = self._p2_pos[1] + dy
-            if not self._check_wall_collision(self._p2_pos[0], new_y, TANK_RADIUS) and math.hypot(self._p2_pos[0] - self._p1_pos[0], new_y - self._p1_pos[1]) >= 2 * TANK_RADIUS:
+            new_y = p2_init[1] + dy
+            if not self._check_wall_collision(self._p2_pos[0], new_y, TANK_RADIUS) and math.hypot(self._p2_pos[0] - p1_init[0], new_y - p1_init[1]) >= 2 * TANK_RADIUS:
                 self._p2_pos[1] = new_y
 
         # Clamp positions to keep inside boundaries

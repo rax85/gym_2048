@@ -344,9 +344,14 @@ class GymGravityDuelEnv(gym.Env):
             if dist_to_star <= STAR_RADIUS or m["lifetime"] <= 0:
                 continue
 
-            # Check ship hits
-            dist_p1 = np.linalg.norm(m_pos - self._p1_pos)
-            dist_p2 = np.linalg.norm(m_pos - self._p2_pos)
+            # Check ship hits with toroidal distance
+            d1_x = (m_pos[0] - self._p1_pos[0] + PLAY_WIDTH / 2.0) % PLAY_WIDTH - PLAY_WIDTH / 2.0
+            d1_y = (m_pos[1] - self._p1_pos[1] + PLAY_HEIGHT / 2.0) % PLAY_HEIGHT - PLAY_HEIGHT / 2.0
+            dist_p1 = math.hypot(d1_x, d1_y)
+
+            d2_x = (m_pos[0] - self._p2_pos[0] + PLAY_WIDTH / 2.0) % PLAY_WIDTH - PLAY_WIDTH / 2.0
+            d2_y = (m_pos[1] - self._p2_pos[1] + PLAY_HEIGHT / 2.0) % PLAY_HEIGHT - PLAY_HEIGHT / 2.0
+            dist_p2 = math.hypot(d2_x, d2_y)
 
             hit_registered = False
             if dist_p1 <= SHIP_RADIUS + MISSILE_RADIUS:

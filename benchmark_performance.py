@@ -1,43 +1,75 @@
 """
-Benchmark script for the Gym2048Env environment.
-Measures the average step time over a large number of steps.
+Benchmark script for all Envpack Gymnasium environments.
+Measures average step time and steps per second (SPS) across all registered environments.
 """
 
+import sys
 import time
-import numpy as np
-from envpack.envs.game_2048.env import Gym2048Env
+import argparse
+import gymnasium as gym
+import envpack
 
 
-def benchmark():
-    env = Gym2048Env()
-    env.reset()
+def benchmark_env(env_id: str, num_steps: int = 1000, warmup_steps: int = 50):
+    try:
+        env = gym.make(env_id)
+    except Exception as e:
+        print(f"Skipping {env_id}: {e}")
+        return None
+
+    obs, _ = env.reset()
 
     # Warmup
-    print("Warming up...")
-    for _ in range(100):
+    for _ in range(warmup_steps):
         action = env.action_space.sample()
-        _, _, terminated, _, _ = env.step(action)
-        if terminated:
+        _, _, terminated, truncated, _ = env.step(action)
+        if terminated or truncated:
             env.reset()
 
-    print("Starting benchmark...")
-    num_steps = 10000
+    # Benchmark
     start_time = time.time()
-
     for _ in range(num_steps):
         action = env.action_space.sample()
-        _, _, terminated, _, _ = env.step(action)
-        if terminated:
+        _, _, terminated, truncated, _ = env.step(action)
+        if terminated or truncated:
             env.reset()
 
     end_time = time.time()
     total_time = end_time - start_time
     avg_step_time = total_time / num_steps
+    sps = num_steps / total_time
+    env.close()
 
-    print(f"Total time for {num_steps} steps: {total_time:.4f} seconds")
-    print(f"Average step time: {avg_step_time:.6f} seconds")
-    print(f"Steps per second: {1/avg_step_time:.2f}")
+    return {
+        "env_id": env_id,
+        "total_time": total_time,
+        "avg_step_time": avg_step_time,
+        "sps": sps,
+    }
+
+
+def main():
+    parser = argparse.ArgumentParser(description="Benchmark Envpack environments")
+    parser.add_argument("--env", type=str, default=None, help="Specific env ID (e.g. envpack/2048-v0)")
+    parser.add_argument("--steps", type=int, default=1000, help="Number of benchmark steps per env")
+    args = parser.parse_args()
+
+    registered_envs = [spec_id for spec_id in gym.envs.registry.keys() if spec_id.startswith("envpack/")]
+
+    if args.env:
+        target_envs = [args.env]
+    else:
+        target_envs = registered_envs
+
+    print(f"Benchmarking {len(target_envs)} environments ({args.steps} steps each)...\n")
+    print(f"{'Environment':<30} | {'SPS':<10} | {'Avg Step Time':<15}")
+    print("-" * 60)
+
+    for env_id in target_envs:
+        res = benchmark_env(env_id, num_steps=args.steps)
+        if res:
+            print(f"{res['env_id']:<30} | {res['sps']:<10.1f} | {res['avg_step_time']*1000:<12.3f} ms")
 
 
 if __name__ == "__main__":
-    benchmark()
+    main()

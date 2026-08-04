@@ -1,6 +1,7 @@
 """A Gymnasium environment for two-player manual transmission car racing with procedural tracks."""
 
 import copy
+import math
 from typing import Any, Tuple, Dict, Optional, List
 
 import gymnasium as gym
@@ -214,9 +215,10 @@ class GymRacingEnv(gym.Env):
 
     def _get_distance_to_track(self, x: float, y: float) -> Tuple[float, int]:
         """Returns distance to closest track point and its index."""
-        dists = np.linalg.norm(self._track_spline - np.array([x, y]), axis=1)
-        min_idx = int(np.argmin(dists))
-        return dists[min_idx], min_idx
+        diff = self._track_spline - np.array([x, y], dtype=np.float32)
+        sq_dists = np.sum(diff * diff, axis=1)
+        min_idx = int(np.argmin(sq_dists))
+        return float(math.sqrt(sq_dists[min_idx])), min_idx
 
     def _create_observation(self) -> Dict[str, Any]:
         """Create normalized observation vector."""

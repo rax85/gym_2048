@@ -30,7 +30,7 @@ class TestGymBattleshipEnv(unittest.TestCase):
         self.assertIn("ships_left", obs)
 
         # Check shapes
-        self.assertEqual(obs["observation"].shape, (8, 8))
+        self.assertEqual(obs["observation"].shape, (2, 8, 8))
         self.assertEqual(obs["valid_mask"].shape, (8, 8))
         self.assertEqual(obs["current_player"], 1)
         np.testing.assert_array_equal(obs["ships_left"], [17, 17])
